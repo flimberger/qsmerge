@@ -1,0 +1,4 @@
+qsmerge
+=======
+
+Simple merge tool
