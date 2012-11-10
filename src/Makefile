@@ -1,7 +1,7 @@
 NAME=qsmerge
 
 INC=
-LIB=-lc
+LIB=-ltomcrypt -lc
 
 CPPFLAGS=
 CFLAGS=-Wall -Wextra -Werror -std=c99 -pedantic ${CPPFLAGS}

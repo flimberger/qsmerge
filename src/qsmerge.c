@@ -1,45 +1,83 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+
+#include <tomcrypt.h>
 
 #include "qsmerge.h"
 
 enum {
-	BUFSIZE = 1024 * 4
+	BUFSIZE = 1024 * 4,
+	SHA1MDS = 20,	/* SHA-1 message digest size */
 };
+
+static Input orig, in1, in2;
+
+static
+void
+init(Input *set, char *name)
+{
+	set->name = name;
+	if ((set->fp = fopen(set->name, "r")) == NULL)
+		die("Cannot open file %s:", set->name);
+	if ((set->hashes = calloc(BUFSIZE * SHA1MDS, sizeof(uchar))) == NULL)
+		die("Failed to reserve memory:");
+	set->lines = 0;
+	set->capacity = BUFSIZE;
+}
+
+static
+void
+term(Input *set)
+{
+	fclose(set->fp);
+	free(set->hashes);
+}
+
+static
+void
+hash(Input *set)
+{
+	hash_state hs;
+	uchar buf[BUFSIZE], *hash;
+	uint i;
+	size_t len;
+
+	while (fgets((char *) buf, BUFSIZE, set->fp) != NULL) {
+		if (set->lines <= set->capacity)
+			if ((set->hashes = realloc(set->hashes, set->capacity += BUFSIZE)) == NULL)
+				die("Failed to reserve memory:");
+		hash = set->hashes + set->lines * SHA1MDS;
+		sha1_init(&hs);
+		len = strlen((char *) buf);
+		sha1_process(&hs, buf, len);
+		sha1_done(&hs, hash);
+		buf[len - 1] = '\0';
+		printf("%s\t", buf);
+		for (i = 0; i < SHA1MDS; i++)
+			printf("%x", hash[i]);
+		printf("\n");
+		set->lines++;
+	}
+	if (ferror(set->fp) != 0)
+		die("Error on stream %s", set->name);
+	printf("\n\n");
+}
 
 int
 main(int argc, char *argv[])
 {
-	char buf[BUFSIZE];
-	char *orig, *in1, *in2;
-	FILE *forig, *fin1, *fin2;
-
 	setpname(argv[0]);
 	if (argc < 4)
 		die("Usage: %s ORIGFILE FILE1 FILE2");
-	orig = argv[1];
-	in1 = argv[2];
-	in2 = argv[3];
-	if ((forig = fopen(orig, "r")) == NULL)
-		die("Cannot open file %s:", orig);
-	if ((fin1 = fopen(in1, "r")) == NULL)
-		die("Cannot open file %s:", in1);
-	if ((fin2 = fopen(in2, "r")) == NULL)
-		die("Cannot open file %s:", in2);
-	while (fgets(buf, BUFSIZE, forig) != NULL)
-		fputs(buf, stdout);
-	if (ferror(forig) != 0)
-		die("Error on stream %s", orig);
-	while (fgets(buf, BUFSIZE, fin1) != NULL)
-		fputs(buf, stdout);
-	if (ferror(fin1) != 0)
-		die("Error on stream %s", in1);
-	while (fgets(buf, BUFSIZE, fin2) != NULL)
-		fputs(buf, stdout);
-	if (ferror(fin2) != 0)
-		die("Error on stream %s", in2);
-	fclose(fin2);
-	fclose(fin1);
-	fclose(forig);
+	init(&orig, argv[1]);
+	init(&in1, argv[2]);
+	init(&in2, argv[3]);
+	hash(&orig);
+	hash(&in1);
+	hash(&in2);
+	term(&orig);
+	term(&in1);
+	term(&in2);
 	exit(0);
 }
