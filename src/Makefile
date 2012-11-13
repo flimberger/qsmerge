@@ -4,8 +4,8 @@ INC=
 LIB=-ltomcrypt -lc
 
 CPPFLAGS=
-CFLAGS=-Wall -Wextra -Werror -std=c99 -pedantic ${CPPFLAGS}
-LDFLAGS=
+CFLAGS=-Wall -Wextra -Werror -std=c99 -pedantic ${CPPFLAGS} -g
+LDFLAGS=-g
 
 CC=gcc
 LD=gcc

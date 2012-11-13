@@ -58,33 +58,7 @@ hash(Input *set)
 		die("Error on stream %s", set->name);
 }
 
-static
-void
-printhashes(Input *set)
-{
-	size_t i;
-	uint j;
-
-	for (i = 0; i < set->lines; i++) {
-		for (j = 0; j < SHA1MDS; j++)
-			printf("%x", *(set->hashes + i * SHA1MDS + j));
-		printf("\n");
-	}
-	printf("\n");
-}
-
-static
-bool
-isemptyhash(uchar *h)
-{
-	uint i;
-
-	for (i = 0; i < SHA1MDS; i++)
-		if (*(h + i) != 0)
-			return false;
-	return true;
-}
-
+/*
 static
 bool
 hashequals(uchar *a, uchar *b)
@@ -96,50 +70,53 @@ hashequals(uchar *a, uchar *b)
 			return false;
 	return true;
 }
+*/
 
 static
 void
 findlcs(Input *a, Input *b)
 {
-	char *l;
-	size_t i, j, lines;
-	uchar *lcs;
-	uint k;
+	size_t i, j, i2, j2, *l;
+	int u, v;
 
-	if ((l = malloc(a->lines * b->lines)) == NULL)
-		die("Failed to reserve memory:");
-	for (i = a->lines; i > 0; i--)
-		for (j = b->lines; j > 0; j--) {
-			if (isemptyhash(a->hashes + SHA1MDS * i) && isemptyhash(b->hashes + SHA1MDS * j))
-				l[i * a->lines + j] = 0;
-			else if (hashequals((a->hashes + SHA1MDS * i), (b->hashes + SHA1MDS * j)))
-				l[i * a->lines + j] = 1 + l[(i + 1) * a->lines + j + 1];
-			else	/* the macro MAX is already defined at /usr/include/tomcrypt_macros.h:408 */
-				l[i * a->lines + j] = MAX(l[(i + 1) * a->lines + j], l[i * a->lines + j + 1]);
+	printf("lines: %lu, %lu\n", a->lines, b->lines);
+	if ((l = calloc((a->lines + 1) * (b->lines + 1), sizeof(size_t))) == NULL)
+		die("Failed to reserve memory.");
+	for (u = 0; u < (int) a->lines + 1; u++) {
+		for (v = 0; v < (int) b->lines + 1; v++) {
+			printf(" %3zu", u * (b->lines + 1) + v);
 		}
-	if ((lcs = calloc(MAX(a->lines, b->lines), sizeof(uchar))) == NULL)
-		die("Failed to reserve memory:");
-	lines = j = i = 0;
-	while (i < a->lines && j < b->lines) {
-		if (hashequals(a->hashes + SHA1MDS * i, b->hashes + SHA1MDS * j)){
-			for (k = 0; k < SHA1MDS; k++)
-				*(lcs + lines * SHA1MDS + k) = *(a->hashes + SHA1MDS * i + k);
-			lines++;
-			j++;
-			i++;
-		} else if (l[(i + 1) * a->lines + j] >= l[i * a->lines + j + 1])
-			i++;
-		else
-			j++;
-	}
-	for (i = 0; i < lines; i++) {
-		for (k = 0; k < SHA1MDS; k++)
-			printf("%x", *(lcs + i * SHA1MDS + k));
 		printf("\n");
 	}
 	printf("\n");
-	free(lcs);
-	free(l);
+	for (u = a->lines + 1; u >= 0; u--) {
+		for (v = b->lines + 1; v >= 0; v--) {
+			printf(" %3zu", u + v * (a->lines + 1));
+		}
+		printf("\n");
+	}
+	printf("\n ---\n\n");
+	for (i = 0; i < a->lines + 1; i++) {
+		for (j = 0; j < b->lines + 1; j++)
+			printf(" %3zu", i * (b->lines + 1) + j);
+		printf("\n");
+	}
+	printf("\n");
+	for (i = 1; i <= a->lines; i++) {
+		for (j = 1; j <= b->lines; j++) {
+			i2 = a->lines - i;
+			j2 = b->lines - j;
+			printf(" %3zu", i2 + (j2 * a->lines));
+			l[i * b->lines + j] = i2 + (j2 * a->lines);
+		}
+		printf("\n");
+	}
+	printf("\n");
+	for (i = 0; i < a->lines + 1; i++) {
+		for (j = 0; j < b->lines + 1; j++)
+			printf(" %3zu", l[i * (b->lines + 1) + j]);
+		printf("\n");
+	}
 }
 
 int
@@ -155,10 +132,6 @@ main(int argc, char *argv[])
 	hash(&in1);
 	hash(&in2);
 	findlcs(&orig, &in1);
-	findlcs(&orig, &in2);
-	printhashes(&orig);
-	printhashes(&in1);
-	printhashes(&in2);
 	term(&orig);
 	term(&in1);
 	term(&in2);
