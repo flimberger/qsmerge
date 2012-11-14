@@ -76,26 +76,11 @@ static
 void
 findlcs(Input *a, Input *b)
 {
-	size_t i, j, i2, j2, *l;
-	int u, v;
+	size_t i, j, i2, j2, *l, var;
 
 	printf("lines: %lu, %lu\n", a->lines, b->lines);
 	if ((l = calloc((a->lines + 1) * (b->lines + 1), sizeof(size_t))) == NULL)
 		die("Failed to reserve memory.");
-	for (u = 0; u < (int) a->lines + 1; u++) {
-		for (v = 0; v < (int) b->lines + 1; v++) {
-			printf(" %3zu", u * (b->lines + 1) + v);
-		}
-		printf("\n");
-	}
-	printf("\n");
-	for (u = a->lines + 1; u >= 0; u--) {
-		for (v = b->lines + 1; v >= 0; v--) {
-			printf(" %3zu", u + v * (a->lines + 1));
-		}
-		printf("\n");
-	}
-	printf("\n ---\n\n");
 	for (i = 0; i < a->lines + 1; i++) {
 		for (j = 0; j < b->lines + 1; j++)
 			printf(" %3zu", i * (b->lines + 1) + j);
@@ -107,11 +92,34 @@ findlcs(Input *a, Input *b)
 			i2 = a->lines - i;
 			j2 = b->lines - j;
 			printf(" %3zu", i2 + (j2 * a->lines));
-			l[i * b->lines + j] = i2 + (j2 * a->lines);
+			// l[i * b->lines + j] = i2 + (j2 * a->lines);
 		}
 		printf("\n");
 	}
 	printf("\n");
+	for (i = 0; i < a->lines + 1; i++) {
+		for (j = 0; j < b->lines + 1; j++) {
+			if (j < b->lines && i < a->lines) {
+				i2 = a->lines - 1 - i;
+				j2 = b->lines - 1 - j;
+				printf(" %-3zu", i2 + (j2 * a->lines));
+				//l[i * (b->lines + 1) + j] = i2 + (j2 * a->lines);
+			} else
+				printf(" %-3zu", 0L);
+		}
+		printf("\n");
+	}
+	printf("\n");
+	var = 0;
+	for (i = 0; i < a->lines + 1; i++) {
+		for (j = 0; j < b->lines + 1; j++) {
+			i2 = a->lines - i;
+			j2 = b->lines - j;
+			if (j2 < b->lines && i2 < a->lines)
+				l[i2 * (b->lines + 1) + j2] = var;
+			var++;
+		}
+	}
 	for (i = 0; i < a->lines + 1; i++) {
 		for (j = 0; j < b->lines + 1; j++)
 			printf(" %3zu", l[i * (b->lines + 1) + j]);
