@@ -1,2 +1,2 @@
 #!/opt/plan9/bin/rc
-./qsmerge ../test/data/simple-orig.txt ../test/data/simple-dave.txt ../test/data/simple-mike.txt | less
+./qsmerge ../test/data/simple-orig.txt ../test/data/simple-dave.txt ../test/data/simple-mike.txt
