@@ -14,9 +14,6 @@ enum {
 
 #define HASHSIZE(A)	((A) * SHA1dlen * sizeof(uchar))
 
-static File forig, fain, fbin;
-static Hashtab orig, ain, bin, loa, lob;
-
 static
 void
 fileopen(File *fs, char *filename)
@@ -130,25 +127,71 @@ findlcs(Hashtab *tab, Hashtab *a, Hashtab *b)
 	free(l);
 }
 
+static
+void
+merge(File *fo, File *fa, File *fb)
+{
+	size_t ocnt, acnt, bcnt, i;
+	Hashtab o, a, b, loa, lob;
+
+	hash(&o, fo);
+	hash(&a, fa);
+	hash(&b, fb);
+	findlcs(&loa, &o, &a);
+	findlcs(&lob, &o, &b);
+	fprintf(stderr, "a lines: %lu\nb lines: %lu\n", loa.curcnt, lob.curcnt);
+	if (loa.curcnt != lob.curcnt)
+		die("Merge conflict detected: lcs of %s and %s are of different size", fa->name, fb->name);
+	for (i = 0; i < loa.curcnt; i++)
+		if (hashequals(&loa.data[i * SHA1dlen], &lob.data[i * SHA1dlen]) == false)
+			die("Merge conflict detected: lcs of %s and %s differ", fa->name, fb->name);
+	ocnt = acnt = bcnt = 0;
+	while (ocnt <= o.curcnt) {
+		if (hashequals(&a.data[acnt * SHA1dlen], &o.data[ocnt * SHA1dlen]) == true) {
+			if (hashequals(&o.data[ocnt * SHA1dlen], &b.data[bcnt * SHA1dlen]) == false) {
+				printf("b %lu: ", bcnt);
+				for (i = 0; i < SHA1dlen; i++)
+					printf("%02x", b.data[bcnt * SHA1dlen + i]);
+				printf("\n");
+				bcnt++;
+			} else {
+				printf("%lu-%lu: ", acnt, bcnt);
+				for (i = 0; i < SHA1dlen; i++)
+					printf("%02x", o.data[ocnt * SHA1dlen + i]);
+				printf("\n");
+				acnt++;
+				bcnt++;
+				ocnt++;
+			}
+		} else if (hashequals(&o.data[ocnt * SHA1dlen], &b.data[bcnt * SHA1dlen]) == true) {
+			printf("a %lu: ", acnt);
+			for (i = 0; i < SHA1dlen; i++)
+				printf("%02x", a.data[acnt * SHA1dlen + i]);
+			printf("\n");
+			acnt++;
+		} else {
+			die("Merge conflict detected: %s:%lu and %s:%lu differ", fa->name, acnt, fb->name, bcnt);
+		}
+	}
+	free(lob.data);
+	free(loa.data);
+	free(b.data);
+	free(a.data);
+	free(o.data);
+}
+
 int
 main(int argc, char *argv[])
 {
+	File forig, fain, fbin;
+
 	setpname(argv[0]);
 	if (argc < 4)
 		die("Usage: %s ORIGFILE FILE1 FILE2");
 	fileopen(&forig, argv[1]);
 	fileopen(&fain, argv[2]);
 	fileopen(&fbin, argv[3]);
-	hash(&orig, &forig);
-	hash(&ain, &fain);
-	hash(&bin, &fbin);
-	findlcs(&loa, &orig, &ain);
-	findlcs(&lob, &orig, &bin);
-	free(lob.data);
-	free(loa.data);
-	free(bin.data);
-	free(ain.data);
-	free(orig.data);
+	merge(&forig, &fain, &fbin);
 	fileclose(&forig);
 	fileclose(&fain);
 	fileclose(&fbin);
