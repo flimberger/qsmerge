@@ -1,0 +1,11 @@
+int foo() {
+	return 1;
+}
+
+/*
+ * middle
+ */
+
+int bar() {
+	return 2;
+}
