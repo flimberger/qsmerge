@@ -5,12 +5,15 @@ typedef unsigned char uchar;
 typedef unsigned int uint;
 
 typedef struct {
+	size_t maxcnt;	/* maximum count of hashes */
+	size_t curcnt;	/* current count of hashes */
+	uchar *data;	/* hash data */
+} Hashtab;
+
+typedef struct {
 	FILE *fp;
 	char *name;
-	uchar *hashes;
-	size_t lines;
-	size_t capacity;
-} Input;
+} File;
 
 void setpname(char *name);
 char *getpname(void);
