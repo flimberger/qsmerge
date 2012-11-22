@@ -131,8 +131,10 @@ static
 void
 merge(File *fo, File *fa, File *fb)
 {
-	size_t ocnt, acnt, bcnt, i;
+	size_t ocnt, acnt, bcnt, i, line;
 	Hashtab o, a, b, loa, lob;
+	Line *out;
+	char buf[BUFSIZE];
 
 	hash(&o, fo);
 	hash(&a, fa);
@@ -145,7 +147,14 @@ merge(File *fo, File *fa, File *fb)
 	for (i = 0; i < loa.curcnt; i++)
 		if (hashequals(&loa.data[i * SHA1dlen], &lob.data[i * SHA1dlen]) == false)
 			die("Merge conflict detected: lcs of %s and %s differ", fa->name, fb->name);
-	ocnt = acnt = bcnt = 0;
+	i = (o.curcnt + (a.curcnt - loa.curcnt) + (b.curcnt - lob.curcnt));
+	/*
+	 * I don't know why I need one additional element
+	 * TODO: find out why
+	 */
+	if ((out = malloc((i + 1) * sizeof(Line))) == NULL)
+		die("Failed to allocate memory");
+	ocnt = acnt = bcnt = line = 0;
 	while (ocnt <= o.curcnt) {
 		if (hashequals(&a.data[acnt * SHA1dlen], &o.data[ocnt * SHA1dlen]) == true) {
 			if (hashequals(&o.data[ocnt * SHA1dlen], &b.data[bcnt * SHA1dlen]) == false) {
@@ -153,12 +162,18 @@ merge(File *fo, File *fa, File *fb)
 				for (i = 0; i < SHA1dlen; i++)
 					printf("%02x", b.data[bcnt * SHA1dlen + i]);
 				printf("\n");
+				out[line].fromb = true;
+				out[line].number = bcnt;
+				line++;
 				bcnt++;
 			} else {
 				printf("%lu-%lu: ", acnt, bcnt);
 				for (i = 0; i < SHA1dlen; i++)
 					printf("%02x", o.data[ocnt * SHA1dlen + i]);
 				printf("\n");
+				out[line].fromb = false;
+				out[line].number = ocnt;
+				line++;
 				acnt++;
 				bcnt++;
 				ocnt++;
@@ -168,11 +183,33 @@ merge(File *fo, File *fa, File *fb)
 			for (i = 0; i < SHA1dlen; i++)
 				printf("%02x", a.data[acnt * SHA1dlen + i]);
 			printf("\n");
+			out[line].fromb = false;
+			out[line].number = acnt;
+			line++;
 			acnt++;
 		} else {
 			die("Merge conflict detected: %s:%lu and %s:%lu differ", fa->name, acnt, fb->name, bcnt);
 		}
 	}
+	acnt = bcnt = 0;
+	rewind(fa->fp);
+	rewind(fb->fp);
+	for (i = 0; i < line; i++) {
+		if (out[i].fromb == true) {
+			while (bcnt < out[i].number) {
+				fgets(buf, BUFSIZE, fb->fp);
+				bcnt++;
+			}
+			printf("%s", buf);
+		} else {
+			while (acnt < out[i].number) {
+				fgets(buf, BUFSIZE, fa->fp);
+				acnt++;
+			}
+			printf("%s", buf);
+		}
+	}
+	free(out);
 	free(lob.data);
 	free(loa.data);
 	free(b.data);

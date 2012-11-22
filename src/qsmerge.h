@@ -15,6 +15,11 @@ typedef struct {
 	char *name;
 } File;
 
+typedef struct {
+        bool fromb;
+        size_t number;
+} Line;
+
 void setpname(char *name);
 char *getpname(void);
 void warn(const char *fmt, ...);
