@@ -172,7 +172,7 @@ merge(File *fo, File *fa, File *fb)
 					printf("%02x", o.data[ocnt * SHA1dlen + i]);
 				printf("\n");
 				out[line].fromb = false;
-				out[line].number = ocnt;
+				out[line].number = acnt;
 				line++;
 				acnt++;
 				bcnt++;
