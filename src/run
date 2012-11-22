@@ -1,2 +1,5 @@
 #!/opt/plan9/bin/rc
-./qsmerge ../test/data/simple-orig.txt ../test/data/simple-dave.txt ../test/data/simple-mike.txt
+if (~ $* fail)
+	./qsmerge ../test/data/simple-orig.txt ../test/data/simple-dave.txt ../test/data/simple-mike.txt
+if not
+	./qsmerge ../test/data/simple-orig.txt ../test/data/simple-a.txt ../test/data/simple-b.txt
