@@ -65,6 +65,27 @@ hash(Hashtab *tab, File *fs)
 }
 
 static
+uchar *
+gethash(Hashtab *tab, size_t index)
+{
+	if (index > tab->curcnt)
+		die("Hash index out of range");
+	return tab->data + index * SHA1dlen;
+}
+
+static
+void
+printhash(uchar *hash, bool newline)
+{
+	size_t i;
+
+	for (i = 0; i < SHA1dlen; i++)
+		printf("%02x", *(hash + i));
+	if (newline == true)
+		printf("\n");
+}
+
+static
 bool
 hashequals(uchar *a, uchar *b)
 {
@@ -74,6 +95,16 @@ hashequals(uchar *a, uchar *b)
 		if (*(a + i) != *(b + i))
 			return false;
 	return true;
+}
+
+static
+void
+copyhash(uchar *target, uchar *source)
+{
+	size_t i;
+
+	for (i = 0; i < SHA1dlen; i++)
+		*(target + i) = *(source + i);
 }
 
 static
@@ -90,7 +121,7 @@ findlcs(Hashtab *tab, Hashtab *a, Hashtab *b)
 			i2 = a->curcnt - i;
 			j2 = b->curcnt - j;
 			if (j2 < b->curcnt && i2 < a->curcnt) {
-				if (a->data[i * SHA1dlen] == a->data[j * SHA1dlen])
+				if (hashequals(gethash(a, i2), gethash(b, j2)))
 					l[i2 * (b->curcnt + 1) + j2] = 1 + l[(i2 + 1) * (b->curcnt + 1) + (j2 + 1)];
 				else
 					l[i2 * (b->curcnt + 1) + j2] = MAX(l[(i2 + 1) * (b->curcnt + 1) + j2], l[i2 * (b->curcnt + 1) + (j2 + 1)]);
@@ -107,22 +138,19 @@ findlcs(Hashtab *tab, Hashtab *a, Hashtab *b)
 	tab->_maxcnt = MIN(a->curcnt, b->curcnt);
 	tab->curcnt = 0;
 	i = j = 0;
-	while (i < a->curcnt && i < b->curcnt) {
-		if (hashequals(&a->data[i * SHA1dlen], &b->data[j * SHA1dlen])) {
-			for (i2 = 0; i2 < SHA1dlen; i2++)
-				tab->data[tab->curcnt * SHA1dlen + i2] = a->data[i * SHA1dlen + i2];
+	while (i < a->curcnt && j < b->curcnt) {
+		if (hashequals(gethash(a, i), gethash(b, j))) {
+			copyhash(gethash(tab, tab->curcnt), gethash(a, i));
 			i++;
 			j++;
 			tab->curcnt++;
-		} else if (l[(i + 1) * (b->curcnt +1) + j] >= l[i * (b->curcnt +1) + (j + 1)])
+		} else if (l[(i + 1) * (b->curcnt + 1) + j] >= l[i * (b->curcnt + 1) + (j + 1)])
 			i++;
 		else
 			j++;
 	}
 	for (i = 0; i < tab->curcnt; i++) {
-		for (j = 0; j < SHA1dlen; j++)
-			printf("%02x", tab->data[i * SHA1dlen + j]);
-		printf("\n");
+		printhash(gethash(tab, i), true);
 	}
 	free(l);
 }
@@ -143,10 +171,12 @@ merge(File *fo, File *fa, File *fb)
 	findlcs(&lob, &o, &b);
 	fprintf(stderr, "a lines: %lu\nb lines: %lu\n", loa.curcnt, lob.curcnt);
 	if (loa.curcnt != lob.curcnt)
-		die("Merge conflict detected: lcs of %s and %s are of different size", fa->name, fb->name);
+		die("Merge conflict detected: lcs of %s and %s are of different size",
+			fa->name, fb->name);
 	for (i = 0; i < loa.curcnt; i++)
-		if (hashequals(&loa.data[i * SHA1dlen], &lob.data[i * SHA1dlen]) == false)
-			die("Merge conflict detected: lcs of %s and %s differ", fa->name, fb->name);
+		if (hashequals(gethash(&loa, i), gethash(&lob, i)) == false)
+			die("Merge conflict detected: lcs of %s and %s differ",
+				fa->name, fb->name);
 	i = (o.curcnt + (a.curcnt - loa.curcnt) + (b.curcnt - lob.curcnt));
 	/*
 	 * I don't know why I need one additional element
@@ -156,21 +186,17 @@ merge(File *fo, File *fa, File *fb)
 		die("Failed to allocate memory");
 	ocnt = acnt = bcnt = line = 0;
 	while (ocnt <= o.curcnt) {
-		if (hashequals(&a.data[acnt * SHA1dlen], &o.data[ocnt * SHA1dlen]) == true) {
-			if (hashequals(&o.data[ocnt * SHA1dlen], &b.data[bcnt * SHA1dlen]) == false) {
+		if (hashequals(gethash(&a, acnt), gethash(&o, ocnt)) == true) {
+			if (hashequals(gethash(&o, ocnt), gethash(&b, bcnt)) == false) {
 				printf("b %lu: ", bcnt);
-				for (i = 0; i < SHA1dlen; i++)
-					printf("%02x", b.data[bcnt * SHA1dlen + i]);
-				printf("\n");
+				printhash(gethash(&b, bcnt), true);
 				out[line].fromb = true;
 				out[line].number = bcnt;
 				line++;
 				bcnt++;
 			} else {
 				printf("%lu-%lu: ", acnt, bcnt);
-				for (i = 0; i < SHA1dlen; i++)
-					printf("%02x", o.data[ocnt * SHA1dlen + i]);
-				printf("\n");
+				printhash(gethash(&o, ocnt), true);
 				out[line].fromb = false;
 				out[line].number = acnt;
 				line++;
@@ -178,17 +204,16 @@ merge(File *fo, File *fa, File *fb)
 				bcnt++;
 				ocnt++;
 			}
-		} else if (hashequals(&o.data[ocnt * SHA1dlen], &b.data[bcnt * SHA1dlen]) == true) {
+		} else if (hashequals(gethash(&o, ocnt), gethash(&b, bcnt)) == true) {
 			printf("a %lu: ", acnt);
-			for (i = 0; i < SHA1dlen; i++)
-				printf("%02x", a.data[acnt * SHA1dlen + i]);
-			printf("\n");
+			printhash(gethash(&a, acnt), true);
 			out[line].fromb = false;
 			out[line].number = acnt;
 			line++;
 			acnt++;
 		} else {
-			die("Merge conflict detected: %s:%lu and %s:%lu differ", fa->name, acnt, fb->name, bcnt);
+			die("Merge conflict detected: %s:%lu and %s:%lu differ",
+				fa->name, acnt, fb->name, bcnt);
 		}
 	}
 	acnt = bcnt = 0;
