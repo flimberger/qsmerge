@@ -1,0 +1,7 @@
+int foobaz() {
+	return 4;
+}
+
+int bar() {
+	return 2;
+}
