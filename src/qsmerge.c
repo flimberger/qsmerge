@@ -37,7 +37,7 @@ hash(Hashtab *tab, File *fs)
 {
 	hash_state hs;
 	uchar buf[BUFSIZE], *hash;
-	size_t len, i;
+	size_t len;
 
 	if ((tab->data = malloc(HASHSIZE(BUFSIZE))) == NULL)
 		die("Failed to reserve memory:");
@@ -54,14 +54,10 @@ hash(Hashtab *tab, File *fs)
 		len = strlen((char *) buf);
 		sha1_process(&hs, buf, len);
 		sha1_done(&hs, hash);
-		for (i = 0; i < SHA1dlen; i++)
-			printf("%02x", *(hash + i));
-		printf(" :: %s", buf);
 		tab->curcnt++;
 	}
 	if (ferror(fs->fp) != 0)
 		die("Error on stream %s", fs->name);
-	printf("\n");
 }
 
 static
@@ -71,18 +67,6 @@ gethash(Hashtab *tab, size_t index)
 	if (index > tab->curcnt)
 		die("Hash index out of range");
 	return tab->data + index * SHA1dlen;
-}
-
-static
-void
-printhash(uchar *hash, bool newline)
-{
-	size_t i;
-
-	for (i = 0; i < SHA1dlen; i++)
-		printf("%02x", *(hash + i));
-	if (newline == true)
-		printf("\n");
 }
 
 static
@@ -113,7 +97,6 @@ findlcs(Hashtab *tab, Hashtab *a, Hashtab *b)
 {
 	size_t i, j, i2, j2, *l;
 
-	printf("lines: %lu, %lu\n", a->curcnt, b->curcnt);
 	if ((l = calloc((a->curcnt + 1) * (b->curcnt + 1), sizeof(size_t))) == NULL)
 		die("Failed to reserve memory.");
 	for (i = 0; i < a->curcnt + 1; i++) {
@@ -127,11 +110,6 @@ findlcs(Hashtab *tab, Hashtab *a, Hashtab *b)
 					l[i2 * (b->curcnt + 1) + j2] = MAX(l[(i2 + 1) * (b->curcnt + 1) + j2], l[i2 * (b->curcnt + 1) + (j2 + 1)]);
 			}
 		}
-	}
-	for (i = 0; i < a->curcnt + 1; i++) {
-		for (j = 0; j < b->curcnt + 1; j++)
-			printf(" %3zu", l[i * (b->curcnt + 1) + j]);
-		printf("\n");
 	}
 	if ((tab->data = malloc(HASHSIZE(MIN(a->curcnt, b->curcnt)))) == NULL)
 		die("Failed to reserve memory.");
@@ -148,9 +126,6 @@ findlcs(Hashtab *tab, Hashtab *a, Hashtab *b)
 			i++;
 		else
 			j++;
-	}
-	for (i = 0; i < tab->curcnt; i++) {
-		printhash(gethash(tab, i), true);
 	}
 	free(l);
 }
@@ -169,7 +144,6 @@ merge(File *fo, File *fa, File *fb)
 	hash(&b, fb);
 	findlcs(&loa, &o, &a);
 	findlcs(&lob, &o, &b);
-	fprintf(stderr, "a lines: %lu\nb lines: %lu\n", loa.curcnt, lob.curcnt);
 	if (loa.curcnt != lob.curcnt)
 		die("Merge conflict detected: lcs of %s and %s are of different size",
 			fa->name, fb->name);
@@ -188,15 +162,11 @@ merge(File *fo, File *fa, File *fb)
 	while (ocnt <= o.curcnt) {
 		if (hashequals(gethash(&a, acnt), gethash(&o, ocnt)) == true) {
 			if (hashequals(gethash(&o, ocnt), gethash(&b, bcnt)) == false) {
-				printf("b %lu: ", bcnt);
-				printhash(gethash(&b, bcnt), true);
 				out[line].fromb = true;
 				out[line].number = bcnt;
 				line++;
 				bcnt++;
 			} else {
-				printf("%lu-%lu: ", acnt, bcnt);
-				printhash(gethash(&o, ocnt), true);
 				out[line].fromb = false;
 				out[line].number = acnt;
 				line++;
@@ -205,8 +175,6 @@ merge(File *fo, File *fa, File *fb)
 				ocnt++;
 			}
 		} else if (hashequals(gethash(&o, ocnt), gethash(&b, bcnt)) == true) {
-			printf("a %lu: ", acnt);
-			printhash(gethash(&a, acnt), true);
 			out[line].fromb = false;
 			out[line].number = acnt;
 			line++;
