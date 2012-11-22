@@ -5,7 +5,7 @@ typedef unsigned char uchar;
 typedef unsigned int uint;
 
 typedef struct {
-	size_t maxcnt;	/* maximum count of hashes */
+	size_t _maxcnt;	/* maximum count of hashes */
 	size_t curcnt;	/* current count of hashes */
 	uchar *data;	/* hash data */
 } Hashtab;

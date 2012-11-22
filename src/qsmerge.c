@@ -41,13 +41,13 @@ hash(Hashtab *tab, File *fs)
 
 	if ((tab->data = malloc(HASHSIZE(BUFSIZE))) == NULL)
 		die("Failed to reserve memory:");
-	tab->maxcnt = BUFSIZE;
+	tab->_maxcnt = BUFSIZE;
 	tab->curcnt = 0;
 	while (fgets((char *) buf, BUFSIZE, fs->fp) != NULL) {
-		if (tab->curcnt == tab->maxcnt) {
-			if ((tab->data = realloc(tab->data, HASHSIZE(tab->maxcnt) + HASHSIZE(BUFSIZE))) == NULL)
+		if (tab->curcnt == tab->_maxcnt) {
+			if ((tab->data = realloc(tab->data, HASHSIZE(tab->_maxcnt) + HASHSIZE(BUFSIZE))) == NULL)
 				die("Failed to reserve memory:");
-			tab->maxcnt += BUFSIZE;
+			tab->_maxcnt += BUFSIZE;
 		}
 		hash = tab->data + tab->curcnt * SHA1dlen;
 		sha1_init(&hs);
@@ -104,7 +104,7 @@ findlcs(Hashtab *tab, Hashtab *a, Hashtab *b)
 	}
 	if ((tab->data = malloc(HASHSIZE(MIN(a->curcnt, b->curcnt)))) == NULL)
 		die("Failed to reserve memory.");
-	tab->maxcnt = MIN(a->curcnt, b->curcnt);
+	tab->_maxcnt = MIN(a->curcnt, b->curcnt);
 	tab->curcnt = 0;
 	i = j = 0;
 	while (i < a->curcnt && i < b->curcnt) {
