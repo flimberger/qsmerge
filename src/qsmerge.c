@@ -116,8 +116,7 @@ findlcs(Hashtab *tab, Hashtab *a, Hashtab *b)
 {
 	size_t i, j, i2, j2, *l;
 
-	if ((l = calloc((a->curcnt + 1) * (b->curcnt + 1), sizeof(size_t))) == NULL)
-		die("Failed to reserve memory.");
+	l = fcalloc((a->curcnt + 1) * (b->curcnt + 1), sizeof(size_t));
 	for (i = 0; i < a->curcnt + 1; i++) {
 		for (j = 0; j < b->curcnt + 1; j++) {
 			i2 = a->curcnt - i;
