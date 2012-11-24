@@ -76,7 +76,6 @@ hash(Hashtab *tab, File *fs)
 	}
 	if (ferror(fs->fp) != 0)
 		die("Error on stream %s", fs->name);
-	printf("\n");
 }
 
 static
