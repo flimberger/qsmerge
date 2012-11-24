@@ -149,10 +149,10 @@ findlcs(Hashtab *tab, Hashtab *a, Hashtab *b)
 }
 
 static
-void
+size_t
 merge(File *fo, File *fa, File *fb)
 {
-	size_t acnt, bcnt, a1cnt, b1cnt, lcnt;
+	size_t acnt, bcnt, a1cnt, b1cnt, lcnt, errs;
 	Hashtab o, a, b, a1, b1, lcs;
 	char buf[BUFSIZE];
 
@@ -164,7 +164,7 @@ merge(File *fo, File *fa, File *fb)
 	findlcs(&lcs, &a1, &b1);
 	rewind(fa->fp);
 	rewind(fb->fp);
-	acnt = bcnt = a1cnt = b1cnt = lcnt = 0;
+	acnt = bcnt = a1cnt = b1cnt = lcnt = errs = 0;
 	while (acnt < a.curcnt || bcnt < b.curcnt) {
 		/*
 		 * case 1: a, b -> use a (or b)
@@ -204,13 +204,14 @@ merge(File *fo, File *fa, File *fb)
 				bcnt++;
 				b1cnt++;
 				acnt++;
-			} else {
+			} else { /* merge conflict */
 				fgets(buf, BUFSIZE, fa->fp);
 				printf("<<<<<<< %s:%lu\n%s", fa->name, acnt + 1, buf);
 				fgets(buf, BUFSIZE, fb->fp);
 				printf("=======\n%s>>>>>>> %s:%lu\n", buf, fb->name, bcnt + 1);
 				acnt++;
 				bcnt++;
+				errs++;
 			}
 		} else if (acnt < a.curcnt) {
 			fgets(buf, BUFSIZE, fa->fp);
@@ -228,11 +229,13 @@ merge(File *fo, File *fa, File *fb)
 	free(b.data);
 	free(a.data);
 	free(o.data);
+	return errs;
 }
 
 int
 main(int argc, char *argv[])
 {
+	int status;
 	File forig, fain, fbin;
 
 	setpname(argv[0]);
@@ -241,9 +244,11 @@ main(int argc, char *argv[])
 	fileopen(&fain, argv[1]);
 	fileopen(&forig, argv[2]);
 	fileopen(&fbin, argv[3]);
-	merge(&forig, &fain, &fbin);
+	status = 0;
+	if (merge(&forig, &fain, &fbin) > 0)
+		status = 1;
 	fileclose(&forig);
 	fileclose(&fain);
 	fileclose(&fbin);
-	exit(0);
+	exit(status);
 }

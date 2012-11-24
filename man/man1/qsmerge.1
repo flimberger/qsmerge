@@ -11,6 +11,9 @@ and prints the result to
 .IR stdout .
 The output format looks a bit like
 .BR diff3 " (1)."
+It returns 0, if the input files were merged without conflicts,
+1 if merge conflicts were encountered
+and 2 if some error occured while execution.
 .SH NOTES
 This program is not very sophisticated,
 it only works line based.
