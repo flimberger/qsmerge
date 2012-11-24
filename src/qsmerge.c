@@ -155,56 +155,54 @@ merge(File *fo, File *fa, File *fb)
 		 * case 3: !a, b -> use a
 		 * case 4: !a, !b -> conflict
 		 */
-		if (hashequals(gethash(&a, acnt), gethash(&b, bcnt))) {
-			fgets(buf, BUFSIZE, fb->fp);
-			fgets(buf, BUFSIZE, fa->fp);
-			printf("%s", buf);
-			acnt++;
-			a1cnt++;
-			bcnt++;
-			b1cnt++;
-			lcnt++;
-		} else if (lcnt < lcs.curcnt && hashequals(gethash(&a, acnt), gethash(&lcs, lcnt))) {
-			fgets(buf, BUFSIZE, fb->fp);
-			printf("%s", buf);
-			bcnt++;
-		} else if (lcnt < lcs.curcnt && hashequals(gethash(&b, bcnt), gethash(&lcs, lcnt))) {
-			fgets(buf, BUFSIZE, fa->fp);
-			printf("%s", buf);
-			acnt++;
-		} else {
-			if (acnt < a.curcnt && bcnt < b.curcnt) {
-				if (hashequals(gethash(&a, acnt), gethash(&a1, a1cnt))) {
-					fgets(buf, BUFSIZE, fa->fp);
-					fgets(buf, BUFSIZE, fb->fp);
-					printf("%s", buf);
-					acnt++;
-					a1cnt++;
-					bcnt++;
-				} else if (hashequals(gethash(&b, bcnt), gethash(&b1, b1cnt))) {
-					fgets(buf, BUFSIZE, fb->fp);
-					fgets(buf, BUFSIZE, fa->fp);
-					printf("%s", buf);
-					bcnt++;
-					b1cnt++;
-					acnt++;
-				} else {
-					fgets(buf, BUFSIZE, fa->fp);
-					printf("<<<<<<< %s:%lu\n%s", fa->name, acnt + 1, buf);
-					fgets(buf, BUFSIZE, fb->fp);
-					printf("=======\n%s>>>>>>> %s:%lu\n", buf, fb->name, bcnt + 1);
-					acnt++;
-					bcnt++;
-				}
-			} else if (acnt < a.curcnt) {
+		if (acnt < a.curcnt && bcnt < b.curcnt) {
+			if (hashequals(gethash(&a, acnt), gethash(&b, bcnt))) {
+				fgets(buf, BUFSIZE, fb->fp);
 				fgets(buf, BUFSIZE, fa->fp);
 				printf("%s", buf);
 				acnt++;
-			} else { /* only b left */
+				a1cnt++;
+				bcnt++;
+				b1cnt++;
+				lcnt++;
+			} else if (lcnt < lcs.curcnt && hashequals(gethash(&a, acnt), gethash(&lcs, lcnt))) {
 				fgets(buf, BUFSIZE, fb->fp);
 				printf("%s", buf);
 				bcnt++;
+			} else if (lcnt < lcs.curcnt && hashequals(gethash(&b, bcnt), gethash(&lcs, lcnt))) {
+				fgets(buf, BUFSIZE, fa->fp);
+				printf("%s", buf);
+				acnt++;
+			} else if (a1cnt < a1.curcnt && hashequals(gethash(&a, acnt), gethash(&a1, a1cnt))) {
+				fgets(buf, BUFSIZE, fa->fp);
+				fgets(buf, BUFSIZE, fb->fp);
+				printf("%s", buf);
+				acnt++;
+				a1cnt++;
+				bcnt++;
+			} else if (b1cnt < b1.curcnt && hashequals(gethash(&b, bcnt), gethash(&b1, b1cnt))) {
+				fgets(buf, BUFSIZE, fb->fp);
+				fgets(buf, BUFSIZE, fa->fp);
+				printf("%s", buf);
+				bcnt++;
+				b1cnt++;
+				acnt++;
+			} else {
+				fgets(buf, BUFSIZE, fa->fp);
+				printf("<<<<<<< %s:%lu\n%s", fa->name, acnt + 1, buf);
+				fgets(buf, BUFSIZE, fb->fp);
+				printf("=======\n%s>>>>>>> %s:%lu\n", buf, fb->name, bcnt + 1);
+				acnt++;
+				bcnt++;
 			}
+		} else if (acnt < a.curcnt) {
+			fgets(buf, BUFSIZE, fa->fp);
+			printf("%s", buf);
+			acnt++;
+		} else { /* only b left */
+			fgets(buf, BUFSIZE, fb->fp);
+			printf("%s", buf);
+			bcnt++;
 		}
 	}
 	free(lcs.data);
