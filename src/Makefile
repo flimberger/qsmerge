@@ -3,9 +3,11 @@ NAME=qsmerge
 INC=
 LIB=-ltomcrypt -lc
 
+DBGFLAGS=-g -fprofile-arcs -ftest-coverage
+
 CPPFLAGS=
-CFLAGS=-Wall -Wextra -Werror -std=c99 -pedantic ${CPPFLAGS} -g
-LDFLAGS=-g
+CFLAGS=-Wall -Wextra -Werror -std=c99 -pedantic ${CPPFLAGS} ${DBGFLAGS}
+LDFLAGS=${DBGFLAGS}
 
 CC=gcc
 LD=gcc
@@ -27,4 +29,4 @@ ${NAME}: ${OBJ}
 	${LD} ${LDFLAGS} -o ${NAME} ${OBJ} ${LIB}
 
 clean:
-	rm -f ${OBJ} ${NAME}
+	rm -f ${OBJ} ${NAME} *.gcda *.gcno *.gcov
