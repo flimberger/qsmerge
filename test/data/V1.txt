@@ -1,0 +1,23 @@
+-----
+Neuer Block
+in V1
+-----
+-----
+BBB
+-----
+Hier ist alles gleich
+-----
+V1 und V2 ändern
+hier das gleiche
+-----
+V1 und V2 ändern
+hier das gleiche
+-----
+V1V1V1 (Merge-Konflikt)
+-----
+-----
+V1V1V1 
+(Merge-Konflikt)
+-----
+Hier ist alles gleich
+-----

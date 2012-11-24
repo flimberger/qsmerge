@@ -1,0 +1,23 @@
+-----
+AAA
+-----
+-----
+Neuer Block 
+in V2
+-----
+Hier ist alles gleich
+-----
+V1 und V2 ändern
+hier das gleiche
+-----
+V1 und V2 ändern
+hier das gleiche
+-----
+V2V2V2 (Merge-Konflikt)
+-----
+-----
+V2V2V2 
+(Merge-Konflikt)
+-----
+Hier ist alles gleich
+-----
