@@ -5,6 +5,8 @@
 
 #include <tomcrypt.h>
 
+#include "error.h"
+#include "fmalloc.h"
 #include "qsmerge.h"
 
 enum {
@@ -39,8 +41,7 @@ hash(Hashtab *tab, File *fs)
 	uchar buf[BUFSIZE], *hash;
 	size_t len;
 
-	if ((tab->data = malloc(HASHSIZE(BUFSIZE))) == NULL)
-		die("Failed to reserve memory:");
+	tab->data = fmalloc(HASHSIZE(BUFSIZE));
 	tab->_maxcnt = BUFSIZE;
 	tab->curcnt = 0;
 	while (fgets((char *) buf, BUFSIZE, fs->fp) != NULL) {
@@ -112,8 +113,7 @@ findlcs(Hashtab *tab, Hashtab *a, Hashtab *b)
 			}
 		}
 	}
-	if ((tab->data = malloc(HASHSIZE(MIN(a->curcnt, b->curcnt)))) == NULL)
-		die("Failed to reserve memory.");
+	tab->data = fmalloc(HASHSIZE(MIN(a->curcnt, b->curcnt)));
 	tab->_maxcnt = MIN(a->curcnt, b->curcnt);
 	tab->curcnt = 0;
 	i = j = 0;

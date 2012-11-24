@@ -12,8 +12,8 @@ LDFLAGS=${DBGFLAGS}
 CC=gcc
 LD=gcc
 
-HDR=${NAME}.h
-SRC=${NAME}.c error.c
+HDR=${NAME}.h error.h fmalloc.h
+SRC=${NAME}.c error.c fmalloc.c
 OBJ=${SRC:.c=.o}
 
 .PHONY: all clean
