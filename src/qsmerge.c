@@ -64,8 +64,7 @@ hash(Hashtab *tab, File *fs)
 	tab->curcnt = 0;
 	while (fgets((char *) buf, BUFSIZE, fs->fp) != NULL) {
 		if (tab->curcnt == tab->_maxcnt) {
-			if ((tab->data = realloc(tab->data, HASHSIZE(tab->_maxcnt) + HASHSIZE(BUFSIZE))) == NULL)
-				die("Failed to reserve memory:");
+			tab->data = frealloc(tab->data, HASHSIZE(tab->_maxcnt) + HASHSIZE(BUFSIZE));
 			tab->_maxcnt += BUFSIZE;
 		}
 		hash = tab->data + tab->curcnt * SHA1dlen;
