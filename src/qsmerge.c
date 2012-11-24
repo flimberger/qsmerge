@@ -192,7 +192,7 @@ merge(File *fo, File *fa, File *fb)
 					fgets(buf, BUFSIZE, fa->fp);
 					printf("<<<<<<< %s:%lu\n%s", fa->name, acnt + 1, buf);
 					fgets(buf, BUFSIZE, fb->fp);
-					printf("=======\n%s>>>>>>> %s:%lu", buf, fb->name, bcnt + 1);
+					printf("=======\n%s>>>>>>> %s:%lu\n", buf, fb->name, bcnt + 1);
 					acnt++;
 					bcnt++;
 				}
@@ -222,9 +222,9 @@ main(int argc, char *argv[])
 
 	setpname(argv[0]);
 	if (argc < 4)
-		die("Usage: %s ORIGFILE FILE1 FILE2");
-	fileopen(&forig, argv[1]);
-	fileopen(&fain, argv[2]);
+		die("Usage: %s FILE1 ORIGFILE FILE2");
+	fileopen(&fain, argv[1]);
+	fileopen(&forig, argv[2]);
 	fileopen(&fbin, argv[3]);
 	merge(&forig, &fain, &fbin);
 	fileclose(&forig);
