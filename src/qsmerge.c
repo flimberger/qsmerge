@@ -135,7 +135,7 @@ static
 void
 merge(File *fo, File *fa, File *fb)
 {
-	size_t acnt, bcnt, lcnt;
+	size_t acnt, bcnt, a1cnt, b1cnt, lcnt;
 	Hashtab o, a, b, a1, b1, lcs;
 	char buf[BUFSIZE];
 
@@ -147,7 +147,7 @@ merge(File *fo, File *fa, File *fb)
 	findlcs(&lcs, &a1, &b1);
 	rewind(fa->fp);
 	rewind(fb->fp);
-	acnt = bcnt = lcnt = 0;
+	acnt = bcnt = a1cnt = b1cnt = lcnt = 0;
 	while (acnt < a.curcnt || bcnt < b.curcnt) {
 		/*
 		 * case 1: a, b -> use a (or b)
@@ -160,7 +160,9 @@ merge(File *fo, File *fa, File *fb)
 			fgets(buf, BUFSIZE, fa->fp);
 			printf("%s", buf);
 			acnt++;
+			a1cnt++;
 			bcnt++;
+			b1cnt++;
 			lcnt++;
 		} else if (lcnt < lcs.curcnt && hashequals(gethash(&a, acnt), gethash(&lcs, lcnt))) {
 			fgets(buf, BUFSIZE, fb->fp);
@@ -172,12 +174,28 @@ merge(File *fo, File *fa, File *fb)
 			acnt++;
 		} else {
 			if (acnt < a.curcnt && bcnt < b.curcnt) {
-				fgets(buf, BUFSIZE, fa->fp);
-				printf("%s:%lu: %s", fa->name, acnt, buf);
-				fgets(buf, BUFSIZE, fb->fp);
-				printf("%s:%lu: %s", fb->name, bcnt, buf);
-				acnt++;
-				bcnt++;
+				if (hashequals(gethash(&a, acnt), gethash(&a1, a1cnt))) {
+					fgets(buf, BUFSIZE, fa->fp);
+					fgets(buf, BUFSIZE, fb->fp);
+					printf("%s", buf);
+					acnt++;
+					a1cnt++;
+					bcnt++;
+				} else if (hashequals(gethash(&b, bcnt), gethash(&b1, b1cnt))) {
+					fgets(buf, BUFSIZE, fb->fp);
+					fgets(buf, BUFSIZE, fa->fp);
+					printf("%s", buf);
+					bcnt++;
+					b1cnt++;
+					acnt++;
+				} else {
+					fgets(buf, BUFSIZE, fa->fp);
+					printf("%s:%lu: %s", fa->name, acnt, buf);
+					fgets(buf, BUFSIZE, fb->fp);
+					printf("%s:%lu: %s", fb->name, bcnt, buf);
+					acnt++;
+					bcnt++;
+				}
 			} else if (acnt < a.curcnt) {
 				fgets(buf, BUFSIZE, fa->fp);
 				printf("%s", buf);
