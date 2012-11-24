@@ -1,3 +1,5 @@
 *.o
 *.out
 qsmerge
+*.gcda
+*.gcno
