@@ -1,0 +1,25 @@
+.TH QS 1 2012-11-24 "IB 711.d" "Qualitätssicherung"
+.SH NAME
+qsmerge - simple three-way merge tool
+.SH SYNOPSIS
+.BI qsmerge " FILEA ORIGFILE FILEB"
+.SH DESCRIPTION
+.B qsmerge
+merges
+.IR FILEA " and " FILEB " based on their common ancestor " ORIGFILE
+and prints the result to
+.IR stdout .
+The output format looks a bit like
+.BR diff3 " (1)."
+.SH NOTES
+This program is not very sophisticated,
+it only works line based.
+.SH SEE ALSO
+.BR diff (1),
+.BR diff3 (1),
+.BR merge (1)
+.SH BUGS
+Please report them to
+.I <flo@snakeoilproductions.net>
+or directly at
+.IR https://github.com/flimberger/qsmerge/issues .
