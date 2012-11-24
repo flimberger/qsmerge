@@ -12,7 +12,7 @@ LDFLAGS=${DBGFLAGS}
 CC=gcc
 LD=gcc
 
-HDR=${NAME}.h error.h fmalloc.h
+HDR=error.h fmalloc.h
 SRC=${NAME}.c error.c fmalloc.c
 OBJ=${SRC:.c=.o}
 

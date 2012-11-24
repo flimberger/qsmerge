@@ -7,7 +7,6 @@
 
 #include "error.h"
 #include "fmalloc.h"
-#include "qsmerge.h"
 
 enum {
 	BUFSIZE = 1024 * 4,
@@ -15,6 +14,25 @@ enum {
 };
 
 #define HASHSIZE(A)	((A) * SHA1dlen * sizeof(uchar))
+
+typedef unsigned char uchar;
+typedef unsigned int uint;
+
+typedef struct {
+	size_t _maxcnt;	/* maximum count of hashes */
+	size_t curcnt;	/* current count of hashes */
+	uchar *data;	/* hash data */
+} Hashtab;
+
+typedef struct {
+	FILE *fp;
+	char *name;
+} File;
+
+typedef struct {
+        bool fromb;
+        size_t number;
+} Line;
 
 static
 void
