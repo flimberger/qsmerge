@@ -37,7 +37,7 @@ hash(Hashtab *tab, File *fs)
 {
 	hash_state hs;
 	uchar buf[BUFSIZE], *hash;
-	size_t len, i;
+	size_t len;
 
 	if ((tab->data = malloc(HASHSIZE(BUFSIZE))) == NULL)
 		die("Failed to reserve memory:");
@@ -54,9 +54,6 @@ hash(Hashtab *tab, File *fs)
 		len = strlen((char *) buf);
 		sha1_process(&hs, buf, len);
 		sha1_done(&hs, hash);
-		for (i = 0; i < SHA1dlen; i++)
-			printf("%02x", *(hash + i));
-		printf(" :: %s", buf);
 		tab->curcnt++;
 	}
 	if (ferror(fs->fp) != 0)
@@ -71,18 +68,6 @@ gethash(Hashtab *tab, size_t index)
 	if (index > tab->curcnt)
 		die("Hash index out of range");
 	return tab->data + index * SHA1dlen;
-}
-
-static
-void
-printhash(uchar *hash, bool newline)
-{
-	size_t i;
-
-	for (i = 0; i < SHA1dlen; i++)
-		printf("%02x", *(hash + i));
-	if (newline == true)
-		printf("\n");
 }
 
 static
@@ -113,7 +98,6 @@ findlcs(Hashtab *tab, Hashtab *a, Hashtab *b)
 {
 	size_t i, j, i2, j2, *l;
 
-	printf("lines: %lu, %lu\n", a->curcnt, b->curcnt);
 	if ((l = calloc((a->curcnt + 1) * (b->curcnt + 1), sizeof(size_t))) == NULL)
 		die("Failed to reserve memory.");
 	for (i = 0; i < a->curcnt + 1; i++) {
@@ -127,11 +111,6 @@ findlcs(Hashtab *tab, Hashtab *a, Hashtab *b)
 					l[i2 * (b->curcnt + 1) + j2] = MAX(l[(i2 + 1) * (b->curcnt + 1) + j2], l[i2 * (b->curcnt + 1) + (j2 + 1)]);
 			}
 		}
-	}
-	for (i = 0; i < a->curcnt + 1; i++) {
-		for (j = 0; j < b->curcnt + 1; j++)
-			printf(" %3zu", l[i * (b->curcnt + 1) + j]);
-		printf("\n");
 	}
 	if ((tab->data = malloc(HASHSIZE(MIN(a->curcnt, b->curcnt)))) == NULL)
 		die("Failed to reserve memory.");
@@ -149,9 +128,6 @@ findlcs(Hashtab *tab, Hashtab *a, Hashtab *b)
 		else
 			j++;
 	}
-	for (i = 0; i < tab->curcnt; i++) {
-		printhash(gethash(tab, i), true);
-	}
 	free(l);
 }
 
@@ -159,84 +135,63 @@ static
 void
 merge(File *fo, File *fa, File *fb)
 {
-	size_t ocnt, acnt, bcnt, i, line;
-	Hashtab o, a, b, loa, lob;
-	Line *out;
+	size_t acnt, bcnt, lcnt;
+	Hashtab o, a, b, a1, b1, lcs;
 	char buf[BUFSIZE];
 
 	hash(&o, fo);
 	hash(&a, fa);
 	hash(&b, fb);
-	findlcs(&loa, &o, &a);
-	findlcs(&lob, &o, &b);
-	fprintf(stderr, "a lines: %lu\nb lines: %lu\n", loa.curcnt, lob.curcnt);
-	if (loa.curcnt != lob.curcnt)
-		die("Merge conflict detected: lcs of %s and %s are of different size",
-			fa->name, fb->name);
-	for (i = 0; i < loa.curcnt; i++)
-		if (hashequals(gethash(&loa, i), gethash(&lob, i)) == false)
-			die("Merge conflict detected: lcs of %s and %s differ",
-				fa->name, fb->name);
-	i = (o.curcnt + (a.curcnt - loa.curcnt) + (b.curcnt - lob.curcnt));
-	/*
-	 * I don't know why I need one additional element
-	 * TODO: find out why
-	 */
-	if ((out = malloc((i + 1) * sizeof(Line))) == NULL)
-		die("Failed to allocate memory");
-	ocnt = acnt = bcnt = line = 0;
-	while (ocnt <= o.curcnt) {
-		if (hashequals(gethash(&a, acnt), gethash(&o, ocnt)) == true) {
-			if (hashequals(gethash(&o, ocnt), gethash(&b, bcnt)) == false) {
-				printf("b %lu: ", bcnt);
-				printhash(gethash(&b, bcnt), true);
-				out[line].fromb = true;
-				out[line].number = bcnt;
-				line++;
-				bcnt++;
-			} else {
-				printf("%lu-%lu: ", acnt, bcnt);
-				printhash(gethash(&o, ocnt), true);
-				out[line].fromb = false;
-				out[line].number = acnt;
-				line++;
-				acnt++;
-				bcnt++;
-				ocnt++;
-			}
-		} else if (hashequals(gethash(&o, ocnt), gethash(&b, bcnt)) == true) {
-			printf("a %lu: ", acnt);
-			printhash(gethash(&a, acnt), true);
-			out[line].fromb = false;
-			out[line].number = acnt;
-			line++;
-			acnt++;
-		} else {
-			die("Merge conflict detected: %s:%lu and %s:%lu differ",
-				fa->name, acnt, fb->name, bcnt);
-		}
-	}
-	acnt = bcnt = 0;
+	findlcs(&a1, &o, &a);
+	findlcs(&b1, &o, &b);
+	findlcs(&lcs, &a1, &b1);
 	rewind(fa->fp);
 	rewind(fb->fp);
-	for (i = 0; i < line; i++) {
-		if (out[i].fromb == true) {
-			while (bcnt < out[i].number) {
+	acnt = bcnt = lcnt = 0;
+	while (acnt < a.curcnt || bcnt < b.curcnt) {
+		/*
+		 * case 1: a, b -> use a (or b)
+		 * case 2: a, !b -> use b
+		 * case 3: !a, b -> use a
+		 * case 4: !a, !b -> conflict
+		 */
+		if (hashequals(gethash(&a, acnt), gethash(&b, bcnt))) {
+			fgets(buf, BUFSIZE, fb->fp);
+			fgets(buf, BUFSIZE, fa->fp);
+			printf("%s", buf);
+			acnt++;
+			bcnt++;
+			lcnt++;
+		} else if (lcnt < lcs.curcnt && hashequals(gethash(&a, acnt), gethash(&lcs, lcnt))) {
+			fgets(buf, BUFSIZE, fb->fp);
+			printf("%s", buf);
+			bcnt++;
+		} else if (lcnt < lcs.curcnt && hashequals(gethash(&b, bcnt), gethash(&lcs, lcnt))) {
+			fgets(buf, BUFSIZE, fa->fp);
+			printf("%s", buf);
+			acnt++;
+		} else {
+			if (acnt < a.curcnt && bcnt < b.curcnt) {
+				fgets(buf, BUFSIZE, fa->fp);
+				printf("%s:%lu: %s", fa->name, acnt, buf);
 				fgets(buf, BUFSIZE, fb->fp);
+				printf("%s:%lu: %s", fb->name, bcnt, buf);
+				acnt++;
+				bcnt++;
+			} else if (acnt < a.curcnt) {
+				fgets(buf, BUFSIZE, fa->fp);
+				printf("%s", buf);
+				acnt++;
+			} else { /* only b left */
+				fgets(buf, BUFSIZE, fb->fp);
+				printf("%s", buf);
 				bcnt++;
 			}
-			printf("%s", buf);
-		} else {
-			while (acnt < out[i].number) {
-				fgets(buf, BUFSIZE, fa->fp);
-				acnt++;
-			}
-			printf("%s", buf);
 		}
 	}
-	free(out);
-	free(lob.data);
-	free(loa.data);
+	free(lcs.data);
+	free(b1.data);
+	free(a1.data);
 	free(b.data);
 	free(a.data);
 	free(o.data);
