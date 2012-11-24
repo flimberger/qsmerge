@@ -190,9 +190,9 @@ merge(File *fo, File *fa, File *fb)
 					acnt++;
 				} else {
 					fgets(buf, BUFSIZE, fa->fp);
-					printf("%s:%lu: %s", fa->name, acnt, buf);
+					printf("<<<<<<< %s:%lu\n%s", fa->name, acnt + 1, buf);
 					fgets(buf, BUFSIZE, fb->fp);
-					printf("%s:%lu: %s", fb->name, bcnt, buf);
+					printf("=======\n%s>>>>>>> %s:%lu", buf, fb->name, bcnt + 1);
 					acnt++;
 					bcnt++;
 				}
