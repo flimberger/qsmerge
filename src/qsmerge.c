@@ -29,11 +29,6 @@ typedef struct {
 	char *name;
 } File;
 
-typedef struct {
-        bool fromb;
-        size_t number;
-} Line;
-
 static
 void
 fileopen(File *fs, char *filename)
