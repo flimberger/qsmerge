@@ -4,3 +4,12 @@ qsmerge
 *.gcda
 *.gcno
 *.gcov
+
+# latex
+*.aux
+*.bbl
+*.blg
+*.log
+*.out
+*.pdf
+*.toc
