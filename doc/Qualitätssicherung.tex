@@ -1,6 +1,3 @@
-% report.tex
-% main file for the project report.
-
 \documentclass[a4paper,titlepage,12pt]{scrartcl}
 
 % utf-8
@@ -66,9 +63,6 @@
 
 \usepackage{natbib}
 
-% not yet used
-%\input{src/cmd}
-
 \begin{document}
 
 \titlehead{%
@@ -83,26 +77,65 @@
 }
 \maketitle
 
-\tableofcontents
+\section{Einleitung}
+\label{sec:intro}
+Im Rahmen der Blockveranstaltung \emph{Qualtitätssicherung} war die Aufgabenstellung,
+ein Werkzeug zum Verschmelzen zweier Textdateien auf der Basis einer gemeinsamen Version zu erstellen.
+Dabei sollte ein Algorithmus zur Bestimmung der Längsten gemeinsamen Teilfolge verwendet werden,
+welcher nicht rekursiv arbeitet und eine maximale Komplexität von $O(n^2)$ hat.
+Dieses Werkzeug war im Anschluss unter Verwendung von Zeilenüberdeckung zu testen.
+Die Implementierungssprache war freigestellt,
+sofern Werkzeuge zur Zeilenüberdeckungsanalyse zur Verfügung stehen.
 
-\clearpage
+Diese Ausarbeitung bezieht sich auf das Programm \texttt{qsmerge},
+welches die Lösung des Autors für die obige Aufgabenstellung darstellt.
+Es wurde in C implementiert,
+weshalb das Werkzeug \texttt{gcov} zu, Test der Zeilenüberdeckung verwendet wurde.
 
 \section{Design}
 \label{sec:design}
-Die Benutzerschnittstelle des \texttt{qsmerge}-Programms wurde \texttt{diff3}
-nachempfunden.
+Die Benutzerschnittstelle des \texttt{qsmerge}-Programms wurde \texttt{diff3} nachempfunden,
+welches üblicherweise in unixoiden Systemumgebungen zur Verfügung steht.
+Daher handelt es sich um ein Kommandozeilenprogramm,
+welches mit folgender Signatur aufgerufen wird:
+\lstset{language=sh, numbers=none, xleftmargin=0pt}
+\begin{lstlisting}
+qsmerge dave.txt orig.txt mike.txt
+\end{lstlisting}
+Dabei handelt es sich bei \texttt{dave.txt} und \texttt{mike.txt} um die beiden neuen Dateiversionen handelt,
+welche miteinander verschmolzen werden sollen,
+während \texttt{orig.txt} die gemeinsame Ausgangsversion ist.
+Bei einer vollständig automatisch durchgeführten Verschmelzung ist der Rückgabewert 0,
+falls Konflikte auftraten 2.
+In diesem Falle werden die Konflikte ebenfalls in die Ausgabe geschrieben,
+wobei sich die Syntax an der Ausgabe von \texttt{diff3 -m} orientiert:
+\begin{verbatim}
+<<<<<<< dave.txt:1
+/* Dave */
+=======
+/* Mike */
+>>>>>>> mike.txt:1
+\end{verbatim}
+Im Gegensatz zum Vorbild werden keine Bereiche unterstützt,
+da \texttt{qsmerge} lediglich auf Zeilenebene arbeitet.
+Auch wird bei einem Konflikt nicht der Inhalt der Ursprungsdatei angezeigt,
+da die Ausgabe dadurch sehr unübersichtlich werden würde.
+Weitere Unterschiede zwischen \texttt{qsmerge} und \texttt{diff3} bestehen darin,
+dass \texttt{qsmerge} keinerlei Optionen unterstützt und keine \texttt{ed}-Skripte ausgeben kann.
+\\
+Optionen zum automatischen Lösen von Konflikten durch Bevorzugung einer Version wären jedoch einfach hinzuzufügen.
 
-\section{Algorithmen}
+\section{Algorithmus}
+\label{sec:algorithm}
 Verwendet wurde der in \citet{web:eppstein} beschriebene LCS-Algorithmus,
 zusammen mit einem eigenen Merge-Algorithmus.
 
 \section{Implementiation}
+\label{sec:implementation}
 \texttt{Qsmerge} wurde in C implementiert.
 
-\clearpage
-
-% Not yet needed
-% \listoffigures
+\section{Test}
+\label{sec:test}
 
 \bibliographystyle{plainnat}
 \bibliography{algorithms}
