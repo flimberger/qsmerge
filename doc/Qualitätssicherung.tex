@@ -63,6 +63,8 @@
 
 \usepackage{natbib}
 
+\usepackage{amsfonts}
+
 \begin{document}
 
 \titlehead{%
@@ -106,7 +108,7 @@ Dabei handelt es sich bei \texttt{dave.txt} und \texttt{mike.txt} um die beiden 
 welche miteinander verschmolzen werden sollen,
 während \texttt{orig.txt} die gemeinsame Ausgangsversion ist.
 Bei einer vollständig automatisch durchgeführten Verschmelzung ist der Rückgabewert 0,
-falls Konflikte auftraten 2.
+falls Konflikte auftraten 1.
 In diesem Falle werden die Konflikte ebenfalls in die Ausgabe geschrieben,
 wobei sich die Syntax an der Ausgabe von \texttt{diff3 -m} orientiert:
 \begin{verbatim}
@@ -116,10 +118,17 @@ wobei sich die Syntax an der Ausgabe von \texttt{diff3 -m} orientiert:
 /* Mike */
 >>>>>>> mike.txt:1
 \end{verbatim}
+Die Ausgabe wird in den Standardausgang geschrieben,
+wodurch man sie einfach in Dateien oder andere Programme umleiten kann.
+Falls während dem Programmablauf Fehler auftreten,
+wird es mit einem Status von 2 beendet.
+Durch diese Architektur kann \texttt{qsmerge} einfach in Skripten verwendet werden.
+
 Im Gegensatz zum Vorbild werden keine Bereiche unterstützt,
 da \texttt{qsmerge} lediglich auf Zeilenebene arbeitet.
 Auch wird bei einem Konflikt nicht der Inhalt der Ursprungsdatei angezeigt,
 da die Ausgabe dadurch sehr unübersichtlich werden würde.
+Dafür wird die Zeile zusätzlich zur Ursprungsdatei angegeben.
 Weitere Unterschiede zwischen \texttt{qsmerge} und \texttt{diff3} bestehen darin,
 dass \texttt{qsmerge} keinerlei Optionen unterstützt und keine \texttt{ed}-Skripte ausgeben kann.
 \\
@@ -127,8 +136,65 @@ Optionen zum automatischen Lösen von Konflikten durch Bevorzugung einer Version
 
 \section{Algorithmus}
 \label{sec:algorithm}
-Verwendet wurde der in \citet{web:eppstein} beschriebene LCS-Algorithmus,
-zusammen mit einem eigenen Merge-Algorithmus.
+Der Verschmelzungsalgorithmus basiert auf der längsten gemeinsamen Teilfolge von Zeilen aller drei Dateiversionen und der darauffolgenden Auflösung der Konflikte.
+Für die weitere Beschreibung gelten folgende Konventionen:
+\begin{itemize}
+\item $\mathbb{L}$ sei die Menge aller geordneten Listen von Textzeilen.
+\item Großgeschriebene Variablen stehen für Elemente von $\mathbb{L}$,
+wobei $A, B, O \in \mathbb{L}$ die beiden Eingabedateien und die Originaldatei repräsentieren.
+\item $|L| \in \mathbb{N}_0$ beschreibt die Kardinalität von $L$,
+also die Anzahl der Textzeilen in $L$.
+\item $L(i)$ mit $i \in \mathbb{N}_0, L \in \mathbb{L}$ beschreibt die $i$-te Zeile aus $L$.
+\item $\mbox{LCS}: \mathbb{L} \times \mathbb{L} \rightarrow \mathbb{L}$ beschreibt eine Funktion,
+welche die längte gemeinsame Teilfolge der Zeilen der beiden Eingabeparameter zurückgibt.
+\end{itemize}
+
+Um die LGT aller drei Dateien zu erhalten,
+werden zunächst die längsten gemeinsamen Teilfolgen mit $L_{A,O} = \mbox{LCS}(A, O)$ und $L_{B,O} = \mbox{LCS}(B, O)$ berechnet,
+mit $L_{A,B,O} = \mbox{LCS}(L_{A,O}, L_{B,O})$ wird anschließend die LGT aller drei Eingabedateien berechnet.
+
+Zur Ermittelung der längsten gemeinsamen Teilfolge wurde der in \citet{web:eppstein} beschriebene LGT-Algorithmus verwendet,
+jedoch musste er an die Eigenheiten des Programms angepasst werden.
+Der Algorithmus nutzt aufsteigende dynamische Programmierung,
+um Rekursion zu vermeiden.
+Dabei werden alle Zeilen der Eingabeparameter miteinander verglichen,
+indem über eine Matrix iteriert wird,
+in welcher die Vergleichsresultate der einzelnen Zeilen gespeichert sind.
+Die Iteration beginnt rechts unten in der ausgenullten Matrix und wird nach links oben fortgesetzt.
+Mit jeder Übereinstimmung zweier Zeilen erhält das aktuelle Feld den Wert des diagonal darunterliegenden Feldes um 1 erhöht.
+Alle nachfolgenden Felder erhalten den Wert der Felder rechts daneben oder darunter,
+außer es kommt zu einer weiteren Übereinstimmung.
+Dadurch erhält man die Anzahl der gleichen Zeilen im ersten Feld der Mastrix.
+Daraufhin kann von vorne durch die Matrix iteriert werden,
+wobei die diagonalen Übergänge zwischen den Feldwerten gesucht werden,
+da an diesen Stellen die Zeilen übereinstimmen.
+
+Mit den auf diese Weise ermittelten LGT wird die Ausgabe zusammengestellt,
+wofür über alle Zeilen der beiden neuen Dateiversionen iteriert wird.
+Solange sowohl $A(i)$ als auch $B(j)$ gültige Zeilen beschreiben,
+also wenn $i < |A| \wedge j < |B|$ gilt,
+wird die Ausgabe von folgende Regeln bestimmt:
+\begin{itemize}
+\item Wenn $A(i) = B(j)$ gilt,
+dann wird eine der beiden Zeilen (welche identisch sind) ausgegeben.
+\item Wenn $A(i) = L_{A,B,O}(m)$ gilt,
+dann wird die Zeile $B(j)$ ausgegeben,
+da diese in B neu eingefügt wurde.
+\item Wenn $B(j) = L_{A,B,O}(m)$ gilt,
+dann wird $A(i)$ augegeben.
+\item Wenn $A(i) = L_{A,O}(k)$ gilt,
+dann wird die Zeile $B(j)$ ausgegeben,
+da diese in A beibehalten wurde.
+Die Zeile $A(i)$ wird verworfen.
+\item Wenn $B(j) = L_{B,O}$ gilt,
+dann wird $A(i)$ ausgegeben und $B(j)$ verworfen.
+\item Im letzten Fall liegt ein Verschmelzungskonflikt vor,
+da sowohl $A(i)$ als auch $B(j)$ neu eingefügt worden.
+Daher werden beide Zeilen mit der in Abschnitt \ref{sec:design} Notation ausgegeben.
+\end{itemize}
+Wenn obige Bedingung nicht erfüllt ist,
+dann ist die eine Datei länger als die andere,
+also werden alle folgenden Zeilen ausgegeben.
 
 \section{Implementiation}
 \label{sec:implementation}
