@@ -238,7 +238,7 @@ main(int argc, char *argv[])
 
 	setpname(argv[0]);
 	if (argc < 4)
-		die("Usage: %s FILE1 ORIGFILE FILE2");
+		die("Usage: %s FILE1 ORIGFILE FILE2", getpname());
 	fileopen(&fain, argv[1]);
 	fileopen(&forig, argv[2]);
 	fileopen(&fbin, argv[3]);
