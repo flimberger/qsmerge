@@ -52,7 +52,7 @@ die(const char *fmt, ...)
 	vwarn(fmt, al);
 	va_end(al);
 
-	exit(0);
+	exit(2);
 }
 
 void
