@@ -93,6 +93,8 @@ Diese Ausarbeitung bezieht sich auf das Programm \texttt{qsmerge},
 welches die Lösung des Autors für die obige Aufgabenstellung darstellt.
 Es wurde in C implementiert,
 weshalb das Werkzeug \texttt{gcov} zu, Test der Zeilenüberdeckung verwendet wurde.
+\\
+Der gesamte Quellcode für das Programm sowie diese Ausarbeitung is im Internet unter der Adresse \url{https://github.com/flimberger/qsmerge} als Git-Repository zu finden.
 
 \section{Design}
 \label{sec:design}
@@ -190,15 +192,65 @@ Die Zeile $A(i)$ wird verworfen.
 dann wird $A(i)$ ausgegeben und $B(j)$ verworfen.
 \item Im letzten Fall liegt ein Verschmelzungskonflikt vor,
 da sowohl $A(i)$ als auch $B(j)$ neu eingefügt worden.
-Daher werden beide Zeilen mit der in Abschnitt \ref{sec:design} Notation ausgegeben.
+Daher werden beide Zeilen mit der in Abschnitt~\ref{sec:design} beschriebenen Notation ausgegeben.
 \end{itemize}
 Wenn obige Bedingung nicht erfüllt ist,
 dann ist die eine Datei länger als die andere,
 also werden alle folgenden Zeilen ausgegeben.
 
-\section{Implementiation}
+\section{Implementation}
 \label{sec:implementation}
-\texttt{Qsmerge} wurde in C implementiert.
+Wie bereits in Abschnitt~\ref{sec:intro} erwähnt,
+wurde \texttt{Qsmerge} in C implementiert.
+
+Der Code wurde auf drei Dateien aufgeteilt,
+um die unmittelbar für \texttt{qsmerge} benötigten Anteile von allgemeineren zu trennen:
+\begin{itemize}
+\item Fehlerbehandlungsfunktionen befinden sich in \texttt{error.c},
+ihre Signaturen sind in \texttt{error.h} definiert.
+\item Speicherverwaltungsfunktionen befinden sich in \texttt{fmalloc.h},
+ihre Signaturen sind in \texttt{fmalloc.h} definiert.
+\item der übrige Code befindet sich in \texttt{qsmerge.c}.
+Da sich die \texttt{main}-Funktion hier befindet,
+verfügt sie nicht über eine separate Header-Datei.
+\end{itemize}
+
+Die Datei \texttt{error.h} stellt eine Mini-Bibliothek zur Fehlerbehandlung dar,
+da sie diverse Fehlerbehandlungsfunktionen zur Verfügung stellt.
+Von diesen wird jedoch lediglich die Funktion \texttt{die()} verwendet,
+welche eine Fehlermeldung ausgibt und das Programm mit dem Status 2 beendet.
+Wenn der Fehlerstring mit einem Doppelpunkt endet,
+dann wird eine Stringrepräsentation des aktuellen Inhalts der globalen \texttt{errno}-Variablen nach dem Fehlerstring ausgegeben.
+Anschließend wird immer ein \emph{newline}-Zeichen ausgegeben,
+so dass der Fehlerstring nicht auf ein solches enden muss.
+\\
+Die große Menge der nicht verwendeten Funktionen rührt daher,
+dass die gleiche oder zumindest sehr ähnliche Versionen von \texttt{error.c} in diversen anderen Projekten des Autors eingesetzt werden.
+
+In der Datei werden Funktionen zur Speicherverwaltung deklariert.
+Im Grunde handelt es sich lediglich um Umhüllungen für die Funktionen der Standardbibliothek,
+die das Programm bei nicht erfolgreicher Speicherreservierung mit einer Fehlermeldung beenden.
+Für diesen Zweck wird die \texttt{die}-Funktion aus \texttt{error.c} verwendet.
+\\
+Die zur Verfügung stehenden Funktionen sind:
+\begin{itemize}
+\item \texttt{fcalloc()}, welches die Funktion \texttt{calloc} aus der Standardbibliothek kapselt
+\item \texttt{fmalloc()}, welches \texttt{malloc} umhüllt
+\item \texttt{frealloc()}, um \texttt{realloc} zu ersetzen
+\end{itemize}
+Das Präfix emph{f} steht dabei für \emph{failsafe},
+da diese Funktionen aus Sicht des Programms nicht fehlschlagen können.
+
+Der übrige Quellcode befindet sich in \texttt{qsmerge.c},
+da er größtenteils direkt mit dem Programm zusammenhängt.
+\\
+Zunächst werden die zwei Konstanten \texttt{BUFSIZE} und \texttt{SHA1dlen} in einem \texttt{enum} deklariert,
+damit sie im Debugger mit ihren Symbolischen Namen zur Verfügung stehen
+(im Unterschied zu mittels \texttt{\#define} deklarierten Konstanten).
+\texttt{BUFSIZE} definiert Größe aller im Programm verwenden Puffer,
+\texttt{SHA1dlen} die Größe eines \emph{message digest} des SHA1-Hashalgorithmus.
+\\
+Das folgende Makro \texttt{HASHSIZE} vereinfacht das Berechnen der Größe eines Arrays von SHA1-\emph{message digest}-Elementen.
 
 \section{Test}
 \label{sec:test}
