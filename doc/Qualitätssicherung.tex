@@ -23,7 +23,7 @@
 	breaklines=true,
 	commentstyle=\color{grey},
 	keywordstyle=\color{orange},
-	language=Go,
+	language=C,
 	numbers=left,
 	showspaces=false,
 	stringstyle=\color{turqoise},
@@ -144,7 +144,7 @@ Für die weitere Beschreibung gelten folgende Konventionen:
 \item $\mathbb{L}$ sei die Menge aller geordneten Listen von Textzeilen.
 \item Großgeschriebene Variablen stehen für Elemente von $\mathbb{L}$,
 wobei $A, B, O \in \mathbb{L}$ die beiden Eingabedateien und die Originaldatei repräsentieren.
-\item $|L| \in \mathbb{N}_0$ beschreibt die Kardinalität von $L$,
+\item $|L| \in \mathbb{N}_0$ mit $L \in \mathbb{L}$ beschreibt die Kardinalität von $L$,
 also die Anzahl der Textzeilen in $L$.
 \item $L(i)$ mit $i \in \mathbb{N}_0, L \in \mathbb{L}$ beschreibt die $i$-te Zeile aus $L$.
 \item $\mbox{LCS}: \mathbb{L} \times \mathbb{L} \rightarrow \mathbb{L}$ beschreibt eine Funktion,
@@ -202,8 +202,30 @@ also werden alle folgenden Zeilen ausgegeben.
 \label{sec:implementation}
 Wie bereits in Abschnitt~\ref{sec:intro} erwähnt,
 wurde \texttt{Qsmerge} in C implementiert.
+Um die Verarbeitung zu beschleunigen,
+werden die Zeilen vor dem Verarbeiten mit dem SHA1-Hashalgorithmus gehashed.
+Dies erleichtert auch die Speicherverwaltung,
+da die \emph{message digest} alle 20 Bytes groß sind.
+So hängt die Größe des benötigten Speichers nur von der Anzahl der Zeilen ab,
+und nicht zusätzlich von der Länge jeder Zeile.
+\\
+Der in Abschnitt~\ref{sec:algorithm} beschriebene Algorithmus musste abgewandelt werden,
+da die Anzahl der Textzeilen bzw. der Hashes in \texttt{size\_t}-Variablen gespeichert sind,
+und daher keine negativen Werte annehmen können.
+Daher müssen die Indices für das Array des LGT-Algorithmus umgerechnet werden,
+da in \citet{web:eppstein} der Zähler für die Iteration bis unter 0 laufen.
+\\
+Eine weitere Änderung ist die Verwendung eindimensionaler anstatt mehrdimensionaler Arrays.
+Dies vereinfacht die Speicherverwaltung ebenfalls,
+da nur ein Zeiger in den Speicher verwaltet werden muss.
+Ein weiterer Vorteil ist die bessere Performance gegenüber mehrdimensionaler Arrays,
+da diese zu \emph{cache thrashing} neigen.
+Ein Nachteil dieses Schemas ist jedoch ein komplizierterer Zugriff,
+da die Zeilen- und Spaltenindices auf einen einzigen Index umgerechnet werden müssen.
+Dies ist jedoch ein wohlbekanntes Problem,
+so dass der Nachteil der schlechteren Lesbarkeit als weniger schwerwiegend betrachtet wird.
 
-Der Code wurde auf drei Dateien aufgeteilt,
+Der Quellcode wurde auf drei Dateien aufgeteilt,
 um die unmittelbar für \texttt{qsmerge} benötigten Anteile von allgemeineren zu trennen:
 \begin{itemize}
 \item Fehlerbehandlungsfunktionen befinden sich in \texttt{error.c},
@@ -251,11 +273,210 @@ damit sie im Debugger mit ihren Symbolischen Namen zur Verfügung stehen
 \texttt{SHA1dlen} die Größe eines \emph{message digest} des SHA1-Hashalgorithmus.
 \\
 Das folgende Makro \texttt{HASHSIZE} vereinfacht das Berechnen der Größe eines Arrays von SHA1-\emph{message digest}-Elementen.
+\\
+Danach werden zwei Datenstrukturen definiert:
+\texttt{Hashtab} kapselt die Liste von Hashes.
+Tatsächlich handelt es sich um vergrößerbare Arrays,
+oft auch Vektoren genannt.
+Die Struktur hat drei Elemente: \texttt{\_maxcnt}, \texttt{curcnt} und \texttt{data}.
+In \texttt{\_maxcnt} ist die Gesamtgröße des Datenspeichers hinterlegt.
+Diese Variable ist ``privat'',
+was durch den vorangestellten Unterstrich signalisiert wird.
+Sie ist lediglich für interne Verwaltungsaufgaben,
+genauer gesagt die Vergrößerung des Arrays,
+gedacht.
+\\
+In \texttt{curcnt} ist die Anzahl der belegten Elemente gespeichert.
+\\
+\texttt{Data} ist schließlich der Zeiger auf das Array selbst,
+welches separat alloziert wird.
+\\
+Die zweite Datenstruktur ist \texttt{File} und dient der Zuordnung von Dateinamen und \texttt{FILE}-Zeigern.
+\lstset{language=C,numbers=left,xleftmargin=20pt}
+\begin{lstlisting}
+typedef struct {
+	size_t _maxcnt;	/* maximum count of hashes */
+	size_t curcnt;	/* current count of hashes */
+	uchar *data;	/* hash data */
+} Hashtab;
+
+typedef struct {
+	FILE *fp;
+	char *name;
+} File;
+\end{lstlisting}
+
+Nach den Definitionen folgen die Funktionsdeklarationen,
+welche alle statisch sind,
+da sie dadurch in ihrem Gültigkeitsbereich auf die Quelldatei beschränkt werden.
+Dadurch kommt es zu Compilerwarnungen,
+wenn eine Funktion deklariert ist,
+nicht aufgerufen wird.
+Dadurch wird die Wartung erleichtert,
+da nicht verwendeter Code einfacher entfernt werden kann.
+
+Die beiden Funktionen \texttt{fileopen} und \texttt{fileclose} dienen der Verwaltung von \texttt{File}-Strukturen.
+\\
+Die nächste Funktion, \texttt{hash}, akzeptiert Zeiger auf eine \texttt{Hashtab}- und eine \texttt{File}-Struktur als Argumente.
+Es wird erwartet,
+dass die \texttt{Hashtab}-Struktur uninitialisiert ist,
+dies wird kedoch nicht sichergestellt.
+Da die Verwendung jedoch rein intern ist,
+sollte dies kein großes Problem darstellen.
+Die Funktion reserviert Speicher für die Hashes,
+und liest die Datei,
+welche durch die \texttt{File}-Struktur spezifiziert ist,
+zeilenweise ein.
+Jede Zeile wird mit dem SHA1-Algorithmus gehashed,
+wozu die libtomcrypt-Bibliothek benutzt wird (\citet{lib:tomcrypt}.
+Sollte die Anzahl der Elemente im Array nicht ausreichen,
+wird es mittels \texttt{frealloc} vergrößert.
+Sollten während der Eingabe Fehler aufgetreten sein,
+wird das Programm mit einem Aufruf von \texttt{die} beendet.
+
+Darauf folgen drei weitere kurze Helferfunktionen,
+welche die Handhabung der SHA1-\emph{message digests} vereinfachen.
+\texttt{Gethash} erwartet einen Zeiger auf eine Hashliste sowie einen Index als Parameter,
+und gibt einen Zeiger auf das durch den Index spezifizierte Element des Arrays zurück.
+Während viele der anderen Funktionen ihre Eingabeparameter nicht auf ihre Gültigkeit prüfen,
+wird dies von \texttt{gethash} getan.
+Der Grund dafür ist,
+dass die Hashlisten teilweise in deutlich größeren Speichersegmenten liegen,
+als sie eigentlich benötigen und daher Zeiger,
+welche hinter das letzte Listenelement zeigen,
+dennoch auf gültige Speicheradressen verweisen.
+Implementierungsfehler in den verwendenten Algorithmen wären so schwerer zu entdecken,
+da sie zwar falsche Ergebnisse liefern,
+aber das Programm ansonsten weiterläuft.
+Daher überprüft \texttt{gethash},
+ob der Index auf ein gültiges Listenelement verweist,
+andernfalls wird das Programm beendet.
+\\
+Die Funktion \texttt{hashequals} vergleicht die beiden Hashes,
+auf welche die Argumente zeigen.
+\\
+Mit \texttt{copyhash} wird der Hash,
+auf welchen der zweite Parameter \texttt{source} zeigt,
+an die durch den ersten Parameter \texttt{target} angegeben ist.
+Die Zeiger auf Hashes,
+welche die letzten beiden Funktionen als Argumente verwenden,
+sollten durch Aufrufe der ersten Funktion, \texttt{gethash},
+erlangt werden.
+Dies gilt vor allem für den \texttt{target}-Parameter der Funktion \texttt{copyhash},
+da es sonst zu Speicherzugriffsverletzungen kommen kann.
+
+In der Funktion \texttt{findcls} wird der in Abschnitt~\ref{sec:algorithm} beschriebene LGT-Algorithmus implementiert.
+Die Argumente sind drei Zeiger auf \texttt{Hashtab}-Strukturen,
+wobei das erste Argument auf eine bislang uninitialisierte Struktur zeigt und in welcher die Ergebnisliste gespeichert wird.
+Die anderen beiden Argumente zeigen auf bereits initialisierte Listen,
+welche die Eingangsparameter sind.
+\\
+Wie am Anfang des Kapitels bereits erwähnt wurde,
+musste er an die Implementierung angepasst werden,
+da die Länge der Hashliste in einem nicht vorzeichenbehafteten Zahlentypen gespeichert ist.
+Dies führt dazu,
+dass die Funktion der Zählervariablen von der Funktion der Indexvariablen getrennt wird und es daher vier Variablen anstatt zweien gibt.
+Während in \citet{web:eppstein} von $|L|$ abwärts bis einschließlich Null gezählt wird,
+zählt diese Implementierung von Null bis $L$.
+Damit die Reihenfolge,
+in welcher das Array durchlaufen wird die gleiche ist,
+wie im ursprünglichen Algorithmus,
+werden die Indices \texttt{i2} und \texttt{j2} durch die Subtraktion der Zählervariablen \texttt{i} und \texttt{j} von der jeweiligen Anzahl der Listenelemente errechnet.
+\\
+Nachdem die Matrix für den LGT-Algorithmus aufgebaut wurde,
+wird der Speicherplatz für die Ausgangsliste reserviert.
+Als Größe wird die Längere der kürzeren Eingabeliste verwendet,
+da die längste gemeinsame Teilfolge maximal so lang sein kann,
+wie die kürzere der beiden Eingabefolgen.
+Anschließend werden die Hashes,
+welche zur LGT der beiden Eingabelisten gehören,
+in die Ausgabeliste kopiert.
+
+Die Funktion \texttt{merge} übernimmt die eigentliche Funktion des Programmes.
+Ihre Parameter sind die \texttt{File}-Strukturen,
+welche auf die Originaldatei und die beiden zu verschmelzenden Dateien verweisen.
+Der Rückgabewert ist die Anzahl der Verschmelzungskonflikte.
+\\
+Das Namensschema der lokalen Variablen ist sehr kompakt,
+aber dennoch logisch:
+\texttt{o}, \texttt{a} und \texttt{b} sind die Hashlisten der drei Eingabedateien und entsprechen $O$, $A$ und $B$.
+\texttt{A1} und \texttt{b1} sind die Hashlisten der LGT der jeweiligen Eingabedatei mit der Originaldatei,
+entsprechen also $L_{A,O}$ und $L_{B,O}$.
+In \texttt{lcs} ist schließlich die LGT aller drei Dateien gespeichert,
+wodurch sie $L_{A,B,O}$ entspricht.
+Da über alle Elemente jeder dieser Listen iteriert werden muss,
+wird für jede Liste ein Zähler benötigt.
+Daher ist jede Zählervariable mit dem Namen der zugehörigen Liste mit einem angehängten \texttt{cnt} benannt,
+mit Ausnahme von \texttt{lcnt},
+welches zu \texttt{lcs} gehört.
+In der Variable \texttt{errs} wird die Anzahl der Verschmelzungskonflikte gespeichert,
+ihr Wert wird am Ende der Funktion zurückgegeben.
+\\
+Im Ablauf der Funktion werden zunächst alle Zeilen der Eingabedateien mittels \texttt{hash} gehashed und in den oben beschriebenen Variablen gespeichert,
+danach werden durch \texttt{findlcs} alle LGT berechnet.
+Danach werden die Dateizeiger der zu verschmelzenden Dateien mittels \texttt{rewind} auf den Anfang gesetzt,
+da die für die Ausgabe die Zeilen in Klartext benötigt werden.
+Die folgende Schleife läuft solange noch nicht alle Zeilen der Eingabedateien eingelesen wurden.
+In ihr wird die Ausgabe nach den in Abschnitt~\ref{sec:algorithm} beschriebenen Regeln bestimmt.
+\\
+Zur Zeileneingabe dient die Variable \texttt{buf},
+welche auch wieder mittels \texttt{printf} ausgegeben wird.
+Eine Alternative wäre die Verwendung von \texttt{puts},
+jedoch befindet sich ein \emph{newline}-Zeichen am Ende der Eingabezeile,
+so dass sich bei der Verwendung von \texttt{puts} zwei davon am Ende jeder Ausgabezeile befinden würden,
+weshalb das letzte Zeichen der Eingabezeile entfernt werden müsste.
+Um die günstigere der beiden Varianten herauszufinden,
+müsste die Laufzeit jeder der beiden Varianten gemessen werden.
+Im Rahmen der Veranstaltung war die \texttt{printf}-Version einfacher und klarer,
+da sie weniger Verwaltungsarbeit und damit Quellcode benötigt.
+\\
+Nachdem alle Zeilen der zu verschmelzenden Dateien verarbeitet sind,
+wird der Speicher aller Hashlisten freigegeben und die Funktion kehrt mit der Rückgabe der Anzahl aller Verschmelzungskonflikte zurück.
+
+In der Hauptroutine des Programms werden lediglich die Argumente geparsed,
+die Eingabedateien geöffnet und die Funktion \texttt{merge} aufgerufen.
+Aufgrund deren Rückgabewert wird der Rückgabestatus des Programms bestimmt.
+Vor dem Beenden des Programms werden noch die zu Beginn geöffneten Dateien geschlossen.
 
 \section{Test}
 \label{sec:test}
+Die eigentliche Vorgabe für die Tests war das Erreichen von 100\% Zeilenabdeckung. 
+Einige Fälle sind jedoch äußerst schwierig zu testen,
+da sie sehr schwer herbeizuführen sind.
+Dies bezieht sich vor allem auf die Standardein- und -ausgabefunktionen.
+So ist beispielsweise das Herbeiführen des Falls,
+dass das Schließen einer erfolgreich geöffneten Datei fehlschlägt,
+sehr schwierig.
+Gleiches gilt für Lesefehler auf dem \texttt{FILE}-Zeiger.
+\\
+Eine weitere Schwierigkeit war die \texttt{gethash}-Funktion.
+Sie überprüft,
+ob ihr \texttt{size}-Argument innerhalb der Liste liegt,
+aus welcher sie ein Element zurückgeben soll,
+was beim Schreiben des Verschmelzungsalgorithmus hilfreich war.
+Bei korrekter Funktionsweise des Algorithmus wird jedoch nie ein zu großer Index übergeben,
+so dass die Abbruchbedingung im Zeilenüberdeckungstest nie ausgeführt wird.
+Dies hätte man durch das Entfernen dieser Überprüfung lösen können,
+jedoch könnte es dann zu Schwierigkeiten kommen,
+wenn der Algorithmus verändert werden soll.
+Daher wird in diesem Fall auf eine Abdeckung verzichtet,
+da ansonsten sinnvolle Funktionalität entfernt werden müsste.
+\\
+Um die Reaktion auf Speicherfehler zu testen,
+wurde der ausführenden Shell mit der \texttt{ulimit}-Funktion der zur Verfügung stehende Speicher begrenzt.
+Hierfür musste experimentell die Grenze bestimmt werden,
+bei welcher die verlinkten Programmbibliotheken sowie das Programm selbst in den Speicher geladen werden können,
+dieser jedoch nicht mehr für die dynamische Speicherreservierung ausreicht.
+Auf dem Laptop des Autors mit einem 64bit Linux betrug dieses Limit 4400 kB.
+\\
+Damit wurde die Abbruchbedingung der \texttt{fmalloc}-Funktion einmal erfüllt,
+da die Fehlerbehandlung der übrigen Speicherverwaltungsfunktionen identisch ist wurde auch an dieser Stelle auf eine 100\%-Abdeckung verzichtet.
+
+In allen der oben genannten Fällen blieben Ausführungen der \texttt{die}-Funktion ungetest,
+welche jedoch bereits an anderen Stellen getestet wurde.
+Aus diesem Grund wurde das Fehlen von 100\% Zeilenabdeckung als vertretbar eingestuft.
 
 \bibliographystyle{plainnat}
-\bibliography{algorithms}
+\bibliography{algorithms,libraries}
 
 \end{document}
