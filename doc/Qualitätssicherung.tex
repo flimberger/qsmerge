@@ -65,6 +65,8 @@
 
 \usepackage{amsfonts}
 
+\usepackage{verbatim}
+
 \begin{document}
 
 \titlehead{%
@@ -78,6 +80,10 @@
     \textbf{Betreuer:} Prof.\,Dr. Dirk W. Hoffmann
 }
 \maketitle
+
+\tableofcontents
+
+\clearpage
 
 \section{Einleitung}
 \label{sec:intro}
@@ -475,6 +481,13 @@ da die Fehlerbehandlung der übrigen Speicherverwaltungsfunktionen identisch ist
 In allen der oben genannten Fällen blieben Ausführungen der \texttt{die}-Funktion ungetest,
 welche jedoch bereits an anderen Stellen getestet wurde.
 Aus diesem Grund wurde das Fehlen von 100\% Zeilenabdeckung als vertretbar eingestuft.
+
+\clearpage
+\appendix
+
+\section{Manual}
+\label{apx:man}
+\verbatiminput{qsmerge.man}
 
 \bibliographystyle{plainnat}
 \bibliography{algorithms,libraries}
