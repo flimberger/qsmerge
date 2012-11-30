@@ -46,7 +46,7 @@
 \fancyhead[LE,RO]{\rightmark}
 \fancyhead[LO,RE]{\leftmark}
 \fancyfoot[LE,RO]{\thepage}
-\fancyfoot[LO,RE]{Qualtitätssicherung WS 2012/2013}
+\fancyfoot[LO,RE]{Qualitätssicherung WS 2012/2013}
 \fancypagestyle{plain}{%
 	\fancyhf{}
 	\renewcommand{\headrulewidth}{0pt}
@@ -87,7 +87,7 @@
 
 \section{Einleitung}
 \label{sec:intro}
-Im Rahmen der Blockveranstaltung \emph{Qualtitätssicherung} war die Aufgabenstellung,
+Im Rahmen der Blockveranstaltung \emph{Qualitätssicherung} war die Aufgabenstellung,
 ein Werkzeug zum Verschmelzen zweier Textdateien auf der Basis einer gemeinsamen Version zu erstellen.
 Dabei sollte ein Algorithmus zur Bestimmung der Längsten gemeinsamen Teilfolge verwendet werden,
 welcher nicht rekursiv arbeitet und eine maximale Komplexität von $O(n^2)$ hat.
@@ -100,7 +100,7 @@ welches die Lösung des Autors für die obige Aufgabenstellung darstellt.
 Es wurde in C implementiert,
 weshalb das Werkzeug \texttt{gcov} zu, Test der Zeilenüberdeckung verwendet wurde.
 \\
-Der gesamte Quellcode für das Programm sowie diese Ausarbeitung is im Internet unter der Adresse \url{https://github.com/flimberger/qsmerge} als Git-Repository zu finden.
+Der gesamte Quellcode für das Programm sowie diese Ausarbeitung ist im Internet unter der Adresse \url{https://github.com/flimberger/qsmerge} als Git-Repository zu finden.
 
 \section{Design}
 \label{sec:design}
@@ -144,17 +144,17 @@ Optionen zum automatischen Lösen von Konflikten durch Bevorzugung einer Version
 
 \section{Algorithmus}
 \label{sec:algorithm}
-Der Verschmelzungsalgorithmus basiert auf der längsten gemeinsamen Teilfolge von Zeilen aller drei Dateiversionen und der darauffolgenden Auflösung der Konflikte.
+Der Verschmelzungsalgorithmus basiert auf der längsten gemeinsamen Teilfolge von Zeilen aller drei Dateiversionen und der darauf folgenden Auflösung der Konflikte.
 Für die weitere Beschreibung gelten folgende Konventionen:
 \begin{itemize}
 \item $\mathbb{L}$ sei die Menge aller geordneten Listen von Textzeilen.
-\item Großgeschriebene Variablen stehen für Elemente von $\mathbb{L}$,
+\item Groß geschriebene Variablen stehen für Elemente von $\mathbb{L}$,
 wobei $A, B, O \in \mathbb{L}$ die beiden Eingabedateien und die Originaldatei repräsentieren.
 \item $|L| \in \mathbb{N}_0$ mit $L \in \mathbb{L}$ beschreibt die Kardinalität von $L$,
 also die Anzahl der Textzeilen in $L$.
 \item $L(i)$ mit $i \in \mathbb{N}_0, L \in \mathbb{L}$ beschreibt die $i$-te Zeile aus $L$.
 \item $\mbox{LCS}: \mathbb{L} \times \mathbb{L} \rightarrow \mathbb{L}$ beschreibt eine Funktion,
-welche die längte gemeinsame Teilfolge der Zeilen der beiden Eingabeparameter zurückgibt.
+welche die längste gemeinsame Teilfolge der Zeilen der beiden Eingabeparameter zurück gibt.
 \end{itemize}
 
 Um die LGT aller drei Dateien zu erhalten,
@@ -190,7 +190,7 @@ dann wird eine der beiden Zeilen (welche identisch sind) ausgegeben.
 dann wird die Zeile $B(j)$ ausgegeben,
 da diese in B neu eingefügt wurde.
 \item Wenn $B(j) = L_{A,B,O}(m)$ gilt,
-dann wird $A(i)$ augegeben.
+dann wird $A(i)$ ausgegeben.
 \item Wenn $A(i) = L_{A,O}(k)$ gilt,
 dann wird die Zeile $B(j)$ ausgegeben,
 da diese in A beibehalten wurde.
@@ -208,7 +208,7 @@ also werden alle folgenden Zeilen ausgegeben.
 \section{Implementation}
 \label{sec:implementation}
 Wie bereits in Abschnitt~\ref{sec:intro} erwähnt,
-wurde \texttt{Qsmerge} in C implementiert.
+wurde \texttt{qsmerge} in C implementiert.
 Um die Verarbeitung zu beschleunigen,
 werden die Zeilen vor dem Verarbeiten mit dem SHA1-Hashalgorithmus gehashed.
 Dies erleichtert auch die Speicherverwaltung,
@@ -229,7 +229,7 @@ Ein weiterer Vorteil ist die bessere Performance gegenüber mehrdimensionaler Ar
 da diese zu \emph{cache thrashing} neigen.
 Ein Nachteil dieses Schemas ist jedoch ein komplizierterer Zugriff,
 da die Zeilen- und Spaltenindices auf einen einzigen Index umgerechnet werden müssen.
-Dies ist jedoch ein wohlbekanntes Problem,
+Dies ist jedoch ein wohl bekanntes Problem,
 so dass der Nachteil der schlechteren Lesbarkeit als weniger schwerwiegend betrachtet wird.
 
 Der Quellcode wurde auf drei Dateien aufgeteilt,
@@ -327,7 +327,7 @@ Die beiden Funktionen \texttt{fileopen} und \texttt{fileclose} dienen der Verwal
 Die nächste Funktion, \texttt{hash}, akzeptiert Zeiger auf eine \texttt{Hashtab}- und eine \texttt{File}-Struktur als Argumente.
 Es wird erwartet,
 dass die \texttt{Hashtab}-Struktur uninitialisiert ist,
-dies wird kedoch nicht sichergestellt.
+dies wird jedoch nicht sichergestellt.
 Da die Verwendung jedoch rein intern ist,
 sollte dies kein großes Problem darstellen.
 Die Funktion reserviert Speicher für die Hashes,
@@ -352,9 +352,9 @@ dass die Hashlisten teilweise in deutlich größeren Speichersegmenten liegen,
 als sie eigentlich benötigen und daher Zeiger,
 welche hinter das letzte Listenelement zeigen,
 dennoch auf gültige Speicheradressen verweisen.
-Implementierungsfehler in den verwendenten Algorithmen wären so schwerer zu entdecken,
+Implementierungsfehler in den verwendeten Algorithmen wären so schwerer zu entdecken,
 da sie zwar falsche Ergebnisse liefern,
-aber das Programm ansonsten weiterläuft.
+aber das Programm ansonsten weiter läuft.
 Daher überprüft \texttt{gethash},
 ob der Index auf ein gültiges Listenelement verweist,
 andernfalls wird das Programm beendet.
@@ -382,7 +382,7 @@ Wie am Anfang des Kapitels bereits erwähnt wurde,
 musste er an die Implementierung angepasst werden,
 da die Länge der Hashliste in einem nicht vorzeichenbehafteten Zahlentypen gespeichert ist.
 Dies führt dazu,
-dass die Funktion der Zählervariablen von der Funktion der Indexvariablen getrennt wird und es daher vier Variablen anstatt zweien gibt.
+dass die Funktion der Zählervariablen von der Funktion der Indexvariablen getrennt wird und es daher vier Variablen anstatt zwei gibt.
 Während in \citet{web:eppstein} von $|L|$ abwärts bis einschließlich Null gezählt wird,
 zählt diese Implementierung von Null bis $L$.
 Damit die Reihenfolge,
@@ -479,7 +479,7 @@ Auf dem Laptop des Autors mit einem 64bit Linux betrug dieses Limit 4400 kB.
 Damit wurde die Abbruchbedingung der \texttt{fmalloc}-Funktion einmal erfüllt,
 da die Fehlerbehandlung der übrigen Speicherverwaltungsfunktionen identisch ist wurde auch an dieser Stelle auf eine 100\%-Abdeckung verzichtet.
 
-In allen der oben genannten Fällen blieben Ausführungen der \texttt{die}-Funktion ungetest,
+In allen der oben genannten Fällen blieben Ausführungen der \texttt{die}-Funktion ungetestet,
 welche jedoch bereits an anderen Stellen getestet wurde.
 Aus diesem Grund wurde das Fehlen von 100\% Zeilenabdeckung als vertretbar eingestuft.
 
