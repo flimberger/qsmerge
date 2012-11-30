@@ -169,10 +169,11 @@ Dabei werden alle Zeilen der Eingabeparameter miteinander verglichen,
 indem über eine Matrix iteriert wird,
 in welcher die Vergleichsresultate der einzelnen Zeilen gespeichert sind.
 Die Iteration beginnt rechts unten in der ausgenullten Matrix und wird nach links oben fortgesetzt.
-Mit jeder Übereinstimmung zweier Zeilen erhält das aktuelle Feld den Wert des diagonal darunterliegenden Feldes um 1 erhöht.
+Jedes Mal, wenn eine Übereinstimmung vorliegt,
+erhält das aktuelle Feld den um Eins inkrementierten Wert des Felds rechts darunter.
 Alle nachfolgenden Felder erhalten den Wert der Felder rechts daneben oder darunter,
 außer es kommt zu einer weiteren Übereinstimmung.
-Dadurch erhält man die Anzahl der gleichen Zeilen im ersten Feld der Mastrix.
+Dadurch erhält man die Anzahl der gleichen Zeilen im ersten Feld der Matrix.
 Daraufhin kann von vorne durch die Matrix iteriert werden,
 wobei die diagonalen Übergänge zwischen den Feldwerten gesucht werden,
 da an diesen Stellen die Zeilen übereinstimmen.
