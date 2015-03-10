@@ -5,12 +5,12 @@ LIB=-ltomcrypt -lc
 
 DBGFLAGS=-g -fprofile-arcs -ftest-coverage
 
-CPPFLAGS=
+CPPFLAGS=${INC}
 CFLAGS=-Wall -Wextra -Werror -std=c99 -pedantic ${CPPFLAGS} ${DBGFLAGS}
 LDFLAGS=${DBGFLAGS}
 
-CC=gcc
-LD=gcc
+CC?=gcc
+LD=${CC}
 
 HDR=error.h fmalloc.h
 SRC=${NAME}.c error.c fmalloc.c
